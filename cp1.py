@@ -8,6 +8,10 @@ import random, time, io, collections
 import socks, socket,urllib
 import stem.control
 import stem.process
+import logging
+
+# for logging the failures
+logging.basicConfig(filename='failures.log',level=logging.DEBUG)
 
 # https://metrics.torproject.org/rs.html#details/5CECC5C30ACC4B3DE462792323967087CC53D947
 fastguard = "5CECC5C30ACC4B3DE462792323967087CC53D947"
@@ -28,7 +32,8 @@ def get_relays():
                 if desc.exit_policy.is_exiting_allowed():
                     exits.setdefault(desc.bandwidth, []).append(desc)
     except Exception as exc:
-        print("Unable to retrieve the consensus: %s" % exc)
+        message = "Unable to retrieve the consensus: " + str(exc)
+        logging.info(message)
     od = collections.OrderedDict(sorted(exits.items()))
     return od, guards
 
@@ -54,17 +59,29 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
         if exit_fixed_run:
             for guard in guards:
                 try:
-                    circuit_id = controller.new_circuit([guard.fingerprint, fastexit])
+                    if guard.fingerprint != fastexit:
+                        try:
+                            circuit_id = controller.new_circuit([guard.fingerprint, fastexit])
+                        except (stem.CircuitExtensionFailed, stem.ControllerError, stem.Timeout) :
+                            message = "Circuit failed to be created: TIMEOUT"
+                            logging.info(message)
                 except stem.InvalidRequest:
-                    print("No such router ", guard.fingerprint)
+                    message = "No such router " + guard.fingerprint
+                    logging.info(message)
             print_circuits(controller)
         else:
             for key in exits:
                 for exit in exits[key]:
                     try:
-                        circuit_id = controller.new_circuit([fastguard, exit.fingerprint])
+                        if fastguard != exit.fingerprint:
+                            try:
+                                circuit_id = controller.new_circuit([fastguard, exit.fingerprint])
+                            except (stem.CircuitExtensionFailed, stem.ControllerError, stem.Timeout) :
+                                message = "Circuit failed to be created: TIMEOUT"
+                                logging.info(message)
                     except stem.InvalidRequest:
-                        print("No such router ", exit.fingerprint)
+                        message = "No such router " + str(exit.fingerprint)
+                        logging.info(message)
             print_circuits(controller)
 
 build_circuits(9051, False, True)
