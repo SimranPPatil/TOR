@@ -148,4 +148,8 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                         logging.info(message)
             print_circuits(controller)
 
+print("Run with exit fixed\n")
+build_circuits(9051, True, False)
+
+print("Run with guard fixed\n")
 build_circuits(9051, False, True)
