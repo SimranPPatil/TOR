@@ -4,7 +4,8 @@ This script builds several two hop circuits and does failure measurements corres
 
 from stem import CircStatus, Flag
 import stem.descriptor.remote
-import random, time, io, collections
+import random, time, StringIO, collections
+import pycurl
 import socks, socket,urllib
 import stem.control
 import stem.process
@@ -15,9 +16,64 @@ logging.basicConfig(filename='failures.log',level=logging.DEBUG)
 
 # https://metrics.torproject.org/rs.html#details/5CECC5C30ACC4B3DE462792323967087CC53D947
 fastguard = "5CECC5C30ACC4B3DE462792323967087CC53D947"
+fg_nickname = "PrivacyRepublic0001"
 
 # https://metrics.torproject.org/rs.html#details/BC630CBBB518BE7E9F4E09712AB0269E9DC7D626
 fastexit = "BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
+fe_nickname = "IPredator"
+
+SOCKS_PORT = 9050
+CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
+
+def query(url):
+  """
+  Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
+  """
+
+  output = StringIO.StringIO()
+
+  query = pycurl.Curl()
+  query.setopt(pycurl.URL, url)
+  query.setopt(pycurl.PROXY, 'localhost')
+  query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
+  query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
+  query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
+  query.setopt(pycurl.WRITEFUNCTION, output.write)
+
+  try:
+    query.perform()
+    return output.getvalue()
+  except pycurl.error as exc:
+    raise ValueError("Unable to reach %s (%s)" % (url, exc))
+
+
+def scan(controller, path):
+  """
+  Fetch check.torproject.org through the given path of relays, providing back
+  the time it took.
+  """
+
+  circuit_id = controller.new_circuit(path, await_build = True)
+
+  def attach_stream(stream):
+    if stream.status == 'NEW':
+      controller.attach_stream(stream.id, circuit_id)
+
+  controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
+
+  try:
+    controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
+    start_time = time.time()
+
+    check_page = query('https://www.google.com/')
+
+    if 'google' not in check_page:
+      raise ValueError("Request didn't have the right content")
+
+    return time.time() - start_time
+  finally:
+    controller.remove_event_listener(attach_stream)
+    controller.reset_conf('__LeaveStreamsUnattached')
 
 # fetches the exit relays and other relays from the current consensus
 # TODO: check for guard policy, if any
@@ -61,10 +117,14 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                 try:
                     if guard.fingerprint != fastexit:
                         try:
-                            circuit_id = controller.new_circuit([guard.fingerprint, fastexit])
-                        except (stem.CircuitExtensionFailed, stem.ControllerError, stem.Timeout) :
-                            message = "Circuit failed to be created: TIMEOUT"
+                            time_taken = scan(controller, [guard.fingerprint, fastexit])
+                            print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
+                            message = guard.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
+                        except Exception as exc:
+                            message = guard.fingerprint + " => " + str(exc)
+                            logging.info(message)
+                            print('%s => %s' % (guard.fingerprint, exc))
                 except stem.InvalidRequest:
                     message = "No such router " + guard.fingerprint
                     logging.info(message)
@@ -75,10 +135,14 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                     try:
                         if fastguard != exit.fingerprint:
                             try:
-                                circuit_id = controller.new_circuit([fastguard, exit.fingerprint])
-                            except (stem.CircuitExtensionFailed, stem.ControllerError, stem.Timeout) :
-                                message = "Circuit failed to be created: TIMEOUT"
+                                time_taken = scan(controller, [fastguard, exit.fingerprint])
+                                print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
+                                message = exit.fingerprint + " => " + str(time_taken) + " seconds"
                                 logging.info(message)
+                            except Exception as exc:
+                                message = exit.fingerprint + " => " + str(exc)
+                                logging.info(message)
+                                print('%s => %s' % (exit.fingerprint, exc))
                     except stem.InvalidRequest:
                         message = "No such router " + str(exit.fingerprint)
                         logging.info(message)
