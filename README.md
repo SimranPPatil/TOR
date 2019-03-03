@@ -13,5 +13,9 @@ The other relays are fetched from the remote directory authorities that contain 
 GET requests to a webpage are made over this established circuit and the causes of failures are noted, if any. Latencies specific to fetching the webpage are noted as well.
 
 Execute: RUN tor in the background; Parallely run python cp1.py
-
 Note: Requires library installations (example: pycurl)
+
+Sample errors (from previous runs):
+- failures.log
+- Stdout data: out
+- tor terminal output: Terminal Saved Output
