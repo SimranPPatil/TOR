@@ -4,12 +4,13 @@ This script builds several two hop circuits and does failure measurements corres
 
 from stem import CircStatus, Flag
 import stem.descriptor.remote
-import random, time, StringIO, collections
+import random, time, io, collections
 import pycurl
 import socks, socket,urllib
 import stem.control
 import stem.process
 import logging
+import json
 
 # for logging the failures
 logging.basicConfig(filename='failures.log',level=logging.DEBUG)
@@ -30,7 +31,7 @@ def query(url):
   Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
   """
 
-  output = StringIO.StringIO()
+  output = io.StringIO()
 
   query = pycurl.Curl()
   query.setopt(pycurl.URL, url)
@@ -89,7 +90,7 @@ def get_relays():
                     exits.setdefault(desc.bandwidth, []).append(desc)
     except Exception as exc:
         message = "Unable to retrieve the consensus: " + str(exc)
-        logging.info(message)
+        logging.info("# no consensus")
     od = collections.OrderedDict(sorted(exits.items()))
     return od, guards
 
@@ -119,15 +120,18 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                         try:
                             time_taken = scan(controller, [guard.fingerprint, fastexit])
                             print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
+                            mobj= {"fingerprint":guard.fingerprint, "time":time_taken}
                             message = guard.fingerprint + " => " + str(time_taken) + " seconds"
-                            logging.info(message)
+                            logging.info(json.dumps(mobj)+"\n")
                         except Exception as exc:
                             message = guard.fingerprint + " => " + str(exc)
-                            logging.info(message)
+                            mobj= {"fingerprint":guard.fingerprint, "exception":str(exc)}
+                            logging.info(json.dumps(mobj)+"\n")
                             print('%s => %s' % (guard.fingerprint, exc))
                 except stem.InvalidRequest:
                     message = "No such router " + guard.fingerprint
-                    logging.info(message)
+                    mobj= {"fingerprint":guard.fingerprint, "exception":"NoSuchRouter"}
+                    logging.info(json.dumps(mobj)+"\n")
             print_circuits(controller)
         else:
             for key in exits:
@@ -138,18 +142,22 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                                 time_taken = scan(controller, [fastguard, exit.fingerprint])
                                 print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
                                 message = exit.fingerprint + " => " + str(time_taken) + " seconds"
-                                logging.info(message)
+                                mobj= {"fingerprint":exit.fingerprint, "time":time_taken}
+                                logging.info(json.dumps(mobj)+"\n")
                             except Exception as exc:
+                                mobj= {"fingerprint":exit.fingerprint, "exception":str(exc)}
                                 message = exit.fingerprint + " => " + str(exc)
-                                logging.info(message)
+                                logging.info(json.dumps(mobj)+"\n")
                                 print('%s => %s' % (exit.fingerprint, exc))
                     except stem.InvalidRequest:
                         message = "No such router " + str(exit.fingerprint)
-                        logging.info(message)
+                        mobj= {"fingerprint":exit.fingerprint, "exception":"NoSuchRouter"}
+                        logging.info(json.dumps(mobj)+"\n")
             print_circuits(controller)
 
+logging.info("# Run with exit fixed")
 print("Run with exit fixed\n")
 build_circuits(9051, True, False)
-
+logging.info("# Run with guard fixed")
 print("Run with guard fixed\n")
 build_circuits(9051, False, True)
