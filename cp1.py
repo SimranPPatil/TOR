@@ -31,7 +31,8 @@ def query(url):
   Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
   """
 
-  output = io.StringIO()
+  #output = io.StringIO()
+  output = io.BytesIO()
 
   query = pycurl.Curl()
   query.setopt(pycurl.URL, url)
@@ -43,7 +44,7 @@ def query(url):
 
   try:
     query.perform()
-    return output.getvalue()
+    return output.getvalue().decode('UTF-8')
   except pycurl.error as exc:
     raise ValueError("Unable to reach %s (%s)" % (url, exc))
 
@@ -90,7 +91,7 @@ def get_relays():
                     exits.setdefault(desc.bandwidth, []).append(desc)
     except Exception as exc:
         message = "Unable to retrieve the consensus: " + str(exc)
-        logging.info(message)
+        #logging.info(message)
         print("# no consensus")
     od = collections.OrderedDict(sorted(exits.items()))
     return od, guards
@@ -124,21 +125,21 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                         try:
                             time_taken = scan(controller, [guard.fingerprint, fastexit])
                             #print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
-                            mobj= {"fingerprint":guard.fingerprint, "time":time_taken}
+                            mobj= {"fingerprint":str(guard.fingerprint), "time":time_taken}
                             message = guard.fingerprint + " => " + str(time_taken) + " seconds"
                             print(json.dumps(mobj))
-                            logging.info(message)
+                            #logging.info(message)
                         except Exception as exc:
                             message = guard.fingerprint + " => " + str(exc)
-                            mobj= {"fingerprint":guard.fingerprint, "exception":str(exc)}
-                            logging.info(message)
+                            mobj= {"fingerprint":str(guard.fingerprint), "exception":str(exc)}
+                            #logging.info(message)
                             print(json.dumps(mobj))
                             #print('%s => %s' % (guard.fingerprint, exc))
                 except stem.InvalidRequest:
                     message = "No such router " + guard.fingerprint
                     mobj= {"fingerprint":guard.fingerprint, "exception":"NoSuchRouter"}
                     print(json.dumps(mobj))
-                    logging.info(message)
+                    #logging.info(message)
             print_circuits(controller)
         else:
             for key in exits:
@@ -151,21 +152,22 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                                 message = exit.fingerprint + " => " + str(time_taken) + " seconds"
                                 mobj= {"fingerprint":exit.fingerprint, "time":time_taken}
                                 print(json.dumps(mobj))
-                                logging.info()
+                                #logging.info()
                             except Exception as exc:
                                 mobj= {"fingerprint":exit.fingerprint, "exception":str(exc)}
                                 message = exit.fingerprint + " => " + str(exc)
-                                logging.info(json.dumps(mobj)+"\n")
+                                #logging.info(json.dumps(mobj)+"\n")
                                 #print('%s => %s' % (exit.fingerprint, exc))
+                                print(json.dumps(mobj))
                     except stem.InvalidRequest:
                         message = "No such router " + str(exit.fingerprint)
                         mobj= {"fingerprint":exit.fingerprint, "exception":"NoSuchRouter"}
-                        logging.info(json.dumps(mobj)+"\n")
+                        #logging.info(json.dumps(mobj)+"\n")
             print_circuits(controller)
 
 logging.info("# Run with exit fixed")
 print("# fixed exit")
-build_circuits(9052, True, False)
+build_circuits(9051, True, False)
 logging.info("# Run with guard fixed")
 print("# fixed guard")
-build_circuits(9052, False, True)
+build_circuits(9051, False, True)
