@@ -10,7 +10,10 @@ import socks, socket,urllib
 import stem.control
 import stem.process
 import logging
+import matplotlib.pyplot as plt
+import numpy as np
 
+failures = []
 # for logging the failures
 logging.basicConfig(filename='failures.log',level=logging.DEBUG)
 
@@ -44,6 +47,8 @@ def query(url):
     query.perform()
     return output.getvalue()
   except pycurl.error as exc:
+    message = "Unable to reach " + str(url) + " " + str(exc)
+    failures.append(message)
     raise ValueError("Unable to reach %s (%s)" % (url, exc))
 
 
@@ -68,6 +73,7 @@ def scan(controller, path):
     check_page = query('https://www.google.com/')
 
     if 'google' not in check_page:
+      failures.append("Request didn't have the right content")
       raise ValueError("Request didn't have the right content")
 
     return time.time() - start_time
@@ -107,15 +113,18 @@ def print_circuits(controller):
           address = desc.address if desc else 'unknown'
           print(" %s- %s (%s, %s)" % (div, fingerprint, nickname, address))
 
+
 def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
     exits, guards = get_relays()
     with stem.control.Controller.from_port(port = PORT) as controller:
         controller.authenticate()
 
         if exit_fixed_run:
+            idx = 0
             for guard in guards:
                 try:
                     if guard.fingerprint != fastexit:
+                        idx += 1
                         try:
                             time_taken = scan(controller, [guard.fingerprint, fastexit])
                             print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
@@ -123,9 +132,11 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                             logging.info(message)
                         except Exception as exc:
                             message = guard.fingerprint + " => " + str(exc)
+                            failures.append(str(exc))
                             logging.info(message)
                             print('%s => %s' % (guard.fingerprint, exc))
                 except stem.InvalidRequest:
+                    failures.append("No such router")
                     message = "No such router " + guard.fingerprint
                     logging.info(message)
             print_circuits(controller)
@@ -141,9 +152,11 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                                 logging.info(message)
                             except Exception as exc:
                                 message = exit.fingerprint + " => " + str(exc)
+                                failures.append(str(exc))
                                 logging.info(message)
                                 print('%s => %s' % (exit.fingerprint, exc))
                     except stem.InvalidRequest:
+                        failures.append("No such router")
                         message = "No such router " + str(exit.fingerprint)
                         logging.info(message)
             print_circuits(controller)
@@ -151,5 +164,13 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
 print("Run with exit fixed\n")
 build_circuits(9051, True, False)
 
+print(failures)
+keys, counts = np.unique(failures, return_counts=True)
+
+plt.bar(keys, counts)
+plt.show()
+
+
+
 print("Run with guard fixed\n")
-build_circuits(9051, False, True)
+#build_circuits(9051, False, True)
