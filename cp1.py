@@ -4,18 +4,21 @@ This script builds several two hop circuits and does failure measurements corres
 
 from stem import CircStatus, Flag
 import stem.descriptor.remote
-import random, time, StringIO, collections
-import pycurl
+import random, time, collections
+import pycurl, io
 import socks, socket,urllib
 import stem.control
 import stem.process
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
 
 failures = []
 # for logging the failures
 logging.basicConfig(filename='failures.log',level=logging.DEBUG)
+logging.info("\n")
+logging.info(str(datetime.now()))
 
 # https://metrics.torproject.org/rs.html#details/5CECC5C30ACC4B3DE462792323967087CC53D947
 fastguard = "5CECC5C30ACC4B3DE462792323967087CC53D947"
@@ -33,7 +36,8 @@ def query(url):
   Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
   """
 
-  output = StringIO.StringIO()
+  #output = StringIO.StringIO()
+  output = io.BytesIO()
 
   query = pycurl.Curl()
   query.setopt(pycurl.URL, url)
@@ -45,7 +49,7 @@ def query(url):
 
   try:
     query.perform()
-    return output.getvalue()
+    return output.getvalue().decode('UTF-8')
   except pycurl.error as exc:
     message = "Unable to reach " + str(url) + " " + str(exc)
     failures.append(message)
