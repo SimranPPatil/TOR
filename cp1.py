@@ -92,9 +92,10 @@ def scan(controller, path):
     controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
     start_time = time.time()
 
-    check_page = query('https://www.google.com/')
+    # check_page = query('https://www.google.com/')
+    check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/')
 
-    if 'google' not in check_page:
+    if 'Distributed Systems' not in check_page:
       failures.append("Request didn't have the right content")
       raise ValueError("Request didn't have the right content")
 
@@ -102,6 +103,38 @@ def scan(controller, path):
   finally:
     controller.remove_event_listener(attach_stream)
     controller.reset_conf('__LeaveStreamsUnattached')
+
+
+def scan_requests(controller, path):
+  """
+  Fetch check.torproject.org through the given path of relays, providing back
+  the time it took.
+  """
+
+  circuit_id = controller.new_circuit(path, await_build = True)
+
+  def attach_stream(stream):
+    if stream.status == 'NEW':
+      controller.attach_stream(stream.id, circuit_id)
+
+  controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
+
+  try:
+    controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
+    start_time = time.time()
+
+    # check_page = query('https://www.google.com/')
+    check_page = requests.get('https://courses.engr.illinois.edu/ece428/sp2019/')
+
+    if 'Distributed Systems' not in check_page.text:
+      failures.append("Request didn't have the right content")
+      raise ValueError("Request didn't have the right content")
+
+    return time.time() - start_time
+  finally:
+    controller.remove_event_listener(attach_stream)
+    controller.reset_conf('__LeaveStreamsUnattached')
+
 
 # fetches the exit relays and other relays from the current consensus
 # TODO: check for guard policy, if any
@@ -161,7 +194,7 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                 try:
                     if guard.fingerprint != fastexit:
                         try:
-                            time_taken = scan(controller, [guard.fingerprint, fastexit])
+                            time_taken = scan_requests(controller, [guard.fingerprint, fastexit])
                             print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
                             message = guard.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
@@ -183,7 +216,7 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
                 try:
                     if fastguard != exit.fingerprint:
                         try:
-                            time_taken = scan(controller, [fastguard, exit.fingerprint])
+                            time_taken = scan_requests(controller, [fastguard, exit.fingerprint])
                             print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
                             message = exit.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
