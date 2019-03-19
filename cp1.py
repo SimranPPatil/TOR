@@ -5,18 +5,36 @@ This script builds several two hop circuits and does failure measurements corres
 from stem import CircStatus, Flag
 import stem.descriptor.remote
 import random, time, collections
-import pycurl, io
+import pycurl, io, requests
 import socks, socket,urllib
 import stem.control
 import stem.process
-import logging
+import logging, json
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 
-failures = []
+failedExits = {}
+failedGuards = {}
+# for info about the relays: https://onionoo.torproject.org/details?search=
 # for logging the failures
-logging.basicConfig(filename='failures.log',level=logging.DEBUG)
+FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
+# logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(filename='failures.log',level=logging.DEBUG, format=FORMAT)
+logging.info("\n")
+logging.info(str(datetime.now()))
+
+def setup_custom_logging(name):
+    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
+    handler = logging.FileHandler('failures.log', mode = "a+")
+    handler.setFormatter(formatter)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    return logger
+
+# logger = setup_custom_logger('failures')
 logging.info("\n")
 logging.info(str(datetime.now()))
 
@@ -90,18 +108,20 @@ def scan(controller, path):
 def get_relays():
     exits = {}
     guards = []
+    AllExits = []
     try:
         for desc in stem.descriptor.remote.get_consensus().run():
             if 'Running' in desc.flags:
                 if 'Guard' in desc.flags:
                     guards.append(desc)
                 if desc.exit_policy.is_exiting_allowed():
+                    AllExits.append(desc)
                     exits.setdefault(desc.bandwidth, []).append(desc)
     except Exception as exc:
         message = "Unable to retrieve the consensus: " + str(exc)
         logging.info(message)
     od = collections.OrderedDict(sorted(exits.items()))
-    return od, guards
+    return od, guards, AllExits
 
 def print_circuits(controller):
     for circ in sorted(controller.get_circuits()):
@@ -117,64 +137,97 @@ def print_circuits(controller):
           address = desc.address if desc else 'unknown'
           print(" %s- %s (%s, %s)" % (div, fingerprint, nickname, address))
 
+def getFlags(Descflags, desc):
+    flags = " ".join(desc.flags)
+    message = desc.fingerprint + " => FLAGS: "+ flags
+    Descflags.setdefault(desc.fingerprint, []).append(desc.flags)
+
+def getRelayInfo(desc):
+    url = "https://onionoo.torproject.org/details?search=" + str(desc.fingerprint)
+    try:
+        r = requests.get(url)
+        return json.loads(r.text)
+    except Exception as e:
+        return {"exception" : e}
+
 
 def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
-    exits, guards = get_relays()
+    exits, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port = PORT) as controller:
         controller.authenticate()
 
         if exit_fixed_run:
-            idx = 0
             for guard in guards:
                 try:
                     if guard.fingerprint != fastexit:
-                        idx += 1
                         try:
                             time_taken = scan(controller, [guard.fingerprint, fastexit])
                             print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
                             message = guard.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
                         except Exception as exc:
-                            message = guard.fingerprint + " => " + str(exc)
                             failures.append(str(exc))
+                            message = guard.fingerprint + " => " + str(exc)
                             logging.info(message)
-                            print('%s => %s' % (guard.fingerprint, exc))
+                            failedGuards[guard.fingerprint] = getRelayInfo(guard)
+                            print('%s => %s ' % (guard.fingerprint, exc))
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + guard.fingerprint
+                    failedGuards[guard.fingerprint] = getRelayInfo(guard)
                     logging.info(message)
             print_circuits(controller)
         else:
-            for key in exits:
-                for exit in exits[key]:
-                    try:
-                        if fastguard != exit.fingerprint:
-                            try:
-                                time_taken = scan(controller, [fastguard, exit.fingerprint])
-                                print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
-                                message = exit.fingerprint + " => " + str(time_taken) + " seconds"
-                                logging.info(message)
-                            except Exception as exc:
-                                message = exit.fingerprint + " => " + str(exc)
+            #for key in exits:
+            for exit in AllExits:
+                try:
+                    if fastguard != exit.fingerprint:
+                        try:
+                            time_taken = scan(controller, [fastguard, exit.fingerprint])
+                            print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
+                            message = exit.fingerprint + " => " + str(time_taken) + " seconds"
+                            logging.info(message)
+                        except Exception as exc:
+                            if "invalid start byte" in str(exc):
+                                failures.append("invalid start byte")
+                            elif "invalid continuation byte" in str(exc):
+                                failures.append("invalid continuation byte")
+                            else:
                                 failures.append(str(exc))
-                                logging.info(message)
-                                print('%s => %s' % (exit.fingerprint, exc))
-                    except stem.InvalidRequest:
-                        failures.append("No such router")
-                        message = "No such router " + str(exit.fingerprint)
-                        logging.info(message)
+                            message = exit.fingerprint + " => " + str(exc)
+                            logging.info(message)
+                            failedExits[exit.fingerprint] = getRelayInfo(exit)
+                            print('%s => %s' % (exit.fingerprint, exc))
+                except stem.InvalidRequest:
+                    failures.append("No such router")
+                    message = "No such router " + str(exit.fingerprint)
+                    failedExits[exit.fingerprint] = getRelayInfo(exit)
+                    logging.info(message)
             print_circuits(controller)
 
+
+def graphBuild(failures, name):
+    keys, counts = np.unique(failures, return_counts=True)
+    labels = np.arange(len(keys))
+    plt.ylim(top=np.amax(counts))
+    plt.bar(labels, counts, width=0.4)
+    plt.xlabel('Types of Failures')
+    plt.ylabel('Frequency')
+    for i in range(len(labels)):
+        txt = str(labels[i]) + ": " + keys[i]
+        plt.text(0, np.amax(counts)-2-i*5, txt, fontsize=6, wrap=True)
+    figname = name+str(datetime.now()) + ".png"
+    plt.savefig(figname)
+
+#failures = ['Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: CHANNEL_CLOSED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', "Unable to reach https://www.google.com/ (35, 'LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to www.google.com:443 ')", "Unable to reach https://www.google.com/ ((35, 'LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to www.google.com:443 '))", 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: CHANNEL_CLOSED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'No such router "D5B8C38539C509380767D4DE20DE84CF84EE8299"', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', "Unable to reach https://www.google.com/ (7, 'Failed to receive SOCKS5 connect request ack.')", "Unable to reach https://www.google.com/ ((7, 'Failed to receive SOCKS5 connect request ack.'))", 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED']
+failures = []
 print("Run with exit fixed\n")
 build_circuits(9051, True, False)
+graphBuild(failures, "FF_exit_")
+print(failedGuards)
 
-print(failures)
-keys, counts = np.unique(failures, return_counts=True)
-
-plt.bar(keys, counts)
-plt.show()
-
-
-
+failures = []
 print("Run with guard fixed\n")
-#build_circuits(9051, False, True)
+build_circuits(9051, False, True)
+graphBuild(failures, "FF_guard_")
+print(failedExits)
