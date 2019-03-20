@@ -39,12 +39,12 @@ logging.info("\n")
 logging.info(str(datetime.now()))
 
 # https://metrics.torproject.org/rs.html#details/5CECC5C30ACC4B3DE462792323967087CC53D947
-fastguard = "5CECC5C30ACC4B3DE462792323967087CC53D947"
-fg_nickname = "PrivacyRepublic0001"
+FASTGUARD = "5CECC5C30ACC4B3DE462792323967087CC53D947"
+FG_NICKNAME = "PrivacyRepublic0001"
 
 # https://metrics.torproject.org/rs.html#details/BC630CBBB518BE7E9F4E09712AB0269E9DC7D626
-fastexit = "BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
-fe_nickname = "IPredator"
+FASTEXIT = "BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
+FE_NICKNAME= "IPredator"
 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
@@ -184,17 +184,35 @@ def getRelayInfo(desc):
         return {"exception" : e}
 
 
+def test_circuit(guard, exit, controller, failures):
+    try:
+	time_taken = scan_requests(controller, [fastguard, exit.fingerprint])
+	print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
+	message = exit.fingerprint + " => " + str(time_taken) + " seconds"
+	logging.info(message)
+    except Exception as exc:
+	if "invalid start byte" in str(exc):
+	    failures.append("invalid start byte")
+	elif "invalid continuation byte" in str(exc):
+	    failures.append("invalid continuation byte")
+	else:
+	    failures.append(str(exc))
+	message = exit.fingerprint + " => " + str(exc)
+	logging.info(message)
+	failedExits[exit.fingerprint] = getRelayInfo(exit)
+	print('%s => %s' % (exit.fingerprint, exc))
+
+
 def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
     exits, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port = PORT) as controller:
         controller.authenticate()
-
         if exit_fixed_run:
             for guard in guards:
                 try:
-                    if guard.fingerprint != fastexit:
+                    if guard.fingerprint != FASTEXIT:
                         try:
-                            time_taken = scan_requests(controller, [guard.fingerprint, fastexit])
+                            time_taken = scan_requests(controller, [guard.fingerprint, FASTEXIT])
                             print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
                             message = guard.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
@@ -214,9 +232,9 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
             #for key in exits:
             for exit in AllExits:
                 try:
-                    if fastguard != exit.fingerprint:
+                    if FASTGUARD != exit.fingerprint:
                         try:
-                            time_taken = scan_requests(controller, [fastguard, exit.fingerprint])
+                            time_taken = scan_requests(controller, [FASTGUARD, exit.fingerprint])
                             print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
                             message = exit.fingerprint + " => " + str(time_taken) + " seconds"
                             logging.info(message)
@@ -252,15 +270,21 @@ def graphBuild(failures, name):
     figname = name+str(datetime.now()) + ".png"
     plt.savefig(figname)
 
-#failures = ['Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: CHANNEL_CLOSED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', "Unable to reach https://www.google.com/ (35, 'LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to www.google.com:443 ')", "Unable to reach https://www.google.com/ ((35, 'LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to www.google.com:443 '))", 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: CHANNEL_CLOSED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'No such router "D5B8C38539C509380767D4DE20DE84CF84EE8299"', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', "Unable to reach https://www.google.com/ (7, 'Failed to receive SOCKS5 connect request ack.')", "Unable to reach https://www.google.com/ ((7, 'Failed to receive SOCKS5 connect request ack.'))", 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: TIMEOUT', 'Circuit failed to be created: DESTROYED']
-failures = []
-print("Run with exit fixed\n")
-build_circuits(9051, True, False)
-graphBuild(failures, "FF_exit_")
-print(failedGuards)
 
-failures = []
-print("Run with guard fixed\n")
-build_circuits(9051, False, True)
-graphBuild(failures, "FF_guard_")
-print(failedExits)
+
+
+if __name__ == "__main__":
+	failures = []
+	print("Run with exit fixed\n")
+	build_circuits(9051, True, False)
+	graphBuild(failures, "FF_exit_")
+	print(failedGuards)
+
+
+	exit()
+
+	failures = []
+	print("Run with guard fixed\n")
+	build_circuits(9051, False, True)
+	graphBuild(failures, "FF_guard_")
+	print(failedExits)
