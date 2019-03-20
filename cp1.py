@@ -4,12 +4,19 @@ This script builds several two hop circuits and does failure measurements corres
 
 from stem import CircStatus, Flag
 import stem.descriptor.remote
-import random, time, collections
-import pycurl, io, requests
-import socks, socket,urllib
+import random
+import time
+import collections
+import pycurl
+import io
+import requests
+import socks
+import socket
+import urllib
 import stem.control
 import stem.process
-import logging, json
+import logging
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -19,19 +26,22 @@ from datetime import datetime
 # for logging the failures
 FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
 # logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
-logging.basicConfig(filename='failures.log',level=logging.DEBUG, format=FORMAT)
+logging.basicConfig(filename='failures.log',
+                    level=logging.DEBUG, format=FORMAT)
 logging.info("\n")
 logging.info(str(datetime.now()))
 
+
 def setup_custom_logging(name):
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
-    handler = logging.FileHandler('failures.log', mode = "a+")
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler = logging.FileHandler('failures.log', mode="a+")
     handler.setFormatter(formatter)
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     return logger
+
 
 # logger = setup_custom_logger('failures')
 logging.info("\n")
@@ -43,10 +53,11 @@ FG_NICKNAME = "PrivacyRepublic0001"
 
 # https://metrics.torproject.org/rs.html#details/BC630CBBB518BE7E9F4E09712AB0269E9DC7D626
 FASTEXIT = "BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
-FE_NICKNAME= "IPredator"
+FE_NICKNAME = "IPredator"
 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
+
 
 def query(url):
     """
@@ -79,7 +90,7 @@ def scan(controller, path):
     the time it took.
     """
 
-    circuit_id = controller.new_circuit(path, await_build = True)
+    circuit_id = controller.new_circuit(path, await_build=True)
 
     def attach_stream(stream):
         if stream.status == 'NEW':
@@ -88,7 +99,8 @@ def scan(controller, path):
     controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
 
     try:
-        controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
+        # leave stream management to us
+        controller.set_conf('__LeaveStreamsUnattached', '1')
         start_time = time.time()
 
         # check_page = query('https://www.google.com/')
@@ -105,34 +117,36 @@ def scan(controller, path):
 
 
 def scan_requests(controller, path):
-  """
-  Fetch check.torproject.org through the given path of relays, providing back
-  the time it took.
-  """
+    """
+    Fetch check.torproject.org through the given path of relays, providing back
+    the time it took.
+    """
 
-  circuit_id = controller.new_circuit(path, await_build = True)
+    circuit_id = controller.new_circuit(path, await_build=True)
 
-  def attach_stream(stream):
-    if stream.status == 'NEW':
-      controller.attach_stream(stream.id, circuit_id)
+    def attach_stream(stream):
+        if stream.status == 'NEW':
+            controller.attach_stream(stream.id, circuit_id)
 
-  controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
+    controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
 
-  try:
-    controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
-    start_time = time.time()
+    try:
+        # leave stream management to us
+        controller.set_conf('__LeaveStreamsUnattached', '1')
+        start_time = time.time()
 
-    # check_page = query('https://www.google.com/')
-    check_page = requests.get('https://courses.engr.illinois.edu/ece428/sp2019/')
+        # check_page = query('https://www.google.com/')
+        check_page = requests.get(
+            'https://courses.engr.illinois.edu/ece428/sp2019/')
 
-    if 'Distributed Systems' not in check_page.text:
-      failures.append("Request didn't have the right content")
-      raise ValueError("Request didn't have the right content")
+        if 'Distributed Systems' not in check_page.text:
+            failures.append("Request didn't have the right content")
+            raise ValueError("Request didn't have the right content")
 
-    return time.time() - start_time
-  finally:
-    controller.remove_event_listener(attach_stream)
-    controller.reset_conf('__LeaveStreamsUnattached')
+        return time.time() - start_time
+    finally:
+        controller.remove_event_listener(attach_stream)
+        controller.reset_conf('__LeaveStreamsUnattached')
 
 
 # fetches the exit relays and other relays from the current consensus
@@ -155,6 +169,7 @@ def get_relays():
     od = collections.OrderedDict(sorted(exits.items()))
     return od, guards, AllExits
 
+
 def print_circuits(controller):
     for circ in sorted(controller.get_circuits()):
         if circ.status != CircStatus.BUILT:
@@ -163,59 +178,65 @@ def print_circuits(controller):
         print("Circuit %s (%s)" % (circ.id, circ.purpose))
 
         for i, entry in enumerate(circ.path):
-          div = '+' if (i == len(circ.path) - 1) else '|'
-          fingerprint, nickname = entry
-          desc = controller.get_network_status(fingerprint, None)
-          address = desc.address if desc else 'unknown'
-          print(" %s- %s (%s, %s)" % (div, fingerprint, nickname, address))
+            div = '+' if (i == len(circ.path) - 1) else '|'
+            fingerprint, nickname = entry
+            desc = controller.get_network_status(fingerprint, None)
+            address = desc.address if desc else 'unknown'
+            print(" %s- %s (%s, %s)" % (div, fingerprint, nickname, address))
+
 
 def getFlags(Descflags, desc):
     flags = " ".join(desc.flags)
-    message = desc.fingerprint + " => FLAGS: "+ flags
+    message = desc.fingerprint + " => FLAGS: " + flags
     Descflags.setdefault(desc.fingerprint, []).append(desc.flags)
 
+
 def getRelayInfo(desc):
-    url = "https://onionoo.torproject.org/details?search=" + str(desc.fingerprint)
+    url = "https://onionoo.torproject.org/details?search=" + \
+        str(desc.fingerprint)
     try:
         r = requests.get(url)
         return json.loads(r.text)
     except Exception as e:
-        return {"exception" : e}
+        return {"exception": e}
 
 
 #
 def test_circuit(guard, exit, controller, failure_log, relay_log):
     try:
-    	time_taken = scan_requests(controller, [guard, exit.fingerprint])
-    	print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
-    	message = exit.fingerprint + " => " + str(time_taken) + " seconds"
-    	logging.info(message)
+        time_taken = scan_requests(controller, [guard, exit.fingerprint])
+        print('| %s -- %s | => %0.2f seconds' %
+              (fg_nickname, exit.nickname, time_taken))
+        message = exit.fingerprint + " => " + str(time_taken) + " seconds"
+        logging.info(message)
     except Exception as exc:
         # Custom Log
-    	if "invalid start byte" in str(exc):
-    	    failure_log.append("invalid start byte")
-    	elif "invalid continuation byte" in str(exc):
-    	    failure_log.append("invalid continuation byte")
-    	else:
-    	    failure_log.append(str(exc))
+        if "invalid start byte" in str(exc):
+            failure_log.append("invalid start byte")
+        elif "invalid continuation byte" in str(exc):
+            failure_log.append("invalid continuation byte")
+        else:
+            failure_log.append(str(exc))
         # Standard Log
-        message="%s => %s ERROR %s"%(guard.fingerprint, exit.fingerprint, str(exc))
+        message = "%s => %s ERROR %s" % (
+            guard.fingerprint, exit.fingerprint, str(exc))
         logging.info(message)
 
         relay_log[exit.fingerprint] = getRelayInfo(exit)
         print(message)
-    	#print('%s => %s' % (exit.fingerprint, exc))
+        #print('%s => %s' % (exit.fingerprint, exc))
 
 
 def build_circuits(PORT, fixedExit, fixedGuard, failedGuards, failedExits):
     exits, guards, AllExits = get_relays()
-    with stem.control.Controller.from_port(port = PORT) as controller:
+    with stem.control.Controller.from_port(port=PORT) as controller:
         controller.authenticate()
         # If fixedExit has been set
         if fixedExit != None:
             for guard in guards:
                 try:
-                    test_circuit(guard, fixedExit, controller, failures, failedGuards)
+                    test_circuit(guard, fixedExit, controller,
+                                 failures, failedGuards)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + guard.fingerprint
@@ -224,11 +245,12 @@ def build_circuits(PORT, fixedExit, fixedGuard, failedGuards, failedExits):
             print_circuits(controller)
         # If fixedGuard has been set
         elif fixedGuard != None:
-            #for key in exits:
+            # for key in exits:
             for exit in AllExits:
                 try:
                     if FASTGUARD != exit.fingerprint:
-                        test_circuit(FASTGUARD, exit, controller, failures, failedExits)
+                        test_circuit(FASTGUARD, exit, controller,
+                                     failures, failedExits)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + str(exit.fingerprint)
@@ -246,15 +268,13 @@ def graphBuild(failures, name):
     plt.ylabel('Frequency')
     for i in range(len(labels)):
         txt = str(labels[i]) + ": " + keys[i]
-        plt.text(0, np.amax(counts)-2-i*5, txt, fontsize=6, wrap=True)
-    figname = name+str(datetime.now()) + ".png"
+        plt.text(0, np.amax(counts) - 2 - i * 5, txt, fontsize=6, wrap=True)
+    figname = name + str(datetime.now()) + ".png"
     plt.savefig(figname)
 
 
-
-
 if __name__ == "__main__":
-    
+
     # get descriptor for the fixed relay
     fixedExit = None
     fixedGuard = None
@@ -269,7 +289,7 @@ if __name__ == "__main__":
     if fixedExit == None or fixedGuard == None:
         print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
         exit()
- 
+
     failedExits = {}
     failedGuards = {}
 
@@ -278,7 +298,6 @@ if __name__ == "__main__":
     build_circuits(9051, fixedExit, None, failedGuards, failedExits)
     graphBuild(failures, "FF_exit_")
     print(failedGuards)
-
 
     exit()
 
