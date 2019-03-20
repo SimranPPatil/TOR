@@ -204,9 +204,9 @@ def getRelayInfo(desc):
 #
 def test_circuit(guard, exit, controller, failure_log, relay_log):
     try:
-        time_taken = scan_requests(controller, [guard, exit.fingerprint])
+        time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint])
         print('| %s -- %s | => %0.2f seconds' %
-              (fg_nickname, exit.nickname, time_taken))
+              (guard.nickname, exit.nickname, time_taken))
         message = exit.fingerprint + " => " + str(time_taken) + " seconds"
         logging.info(message)
     except Exception as exc:
@@ -222,6 +222,7 @@ def test_circuit(guard, exit, controller, failure_log, relay_log):
             guard.fingerprint, exit.fingerprint, str(exc))
         logging.info(message)
 
+        return
         relay_log[exit.fingerprint] = getRelayInfo(exit)
         print(message)
         #print('%s => %s' % (exit.fingerprint, exc))
