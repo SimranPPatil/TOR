@@ -186,7 +186,7 @@ def getRelayInfo(desc):
 #
 def test_circuit(guard, exit, controller, failure_log, relay_log):
     try:
-    	time_taken = scan_requests(controller, [FASTGUARD, exit.fingerprint])
+    	time_taken = scan_requests(controller, [guard, exit.fingerprint])
     	print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
     	message = exit.fingerprint + " => " + str(time_taken) + " seconds"
     	logging.info(message)
@@ -199,33 +199,36 @@ def test_circuit(guard, exit, controller, failure_log, relay_log):
     	else:
     	    failure_log.append(str(exc))
         # Standard Log
-    	message = exit.fingerprint + " => " + str(exc)
-    	logging.info(message)
+        message="%s => %s ERROR %s"%(guard.fingerprint, exit.fingerprint, str(exc))
+        logging.info(message)
 
-    	relay_log[exit.fingerprint] = getRelayInfo(exit)
-    	print('%s => %s' % (exit.fingerprint, exc))
+        relay_log[exit.fingerprint] = getRelayInfo(exit)
+        print(message)
+    	#print('%s => %s' % (exit.fingerprint, exc))
 
 
-def build_circuits(PORT, exit_fixed_run, guard_fixed_run, failedGuards, failedExits):
+def build_circuits(PORT, fixedExit, fixedGuard, failedGuards, failedExits):
     exits, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port = PORT) as controller:
         controller.authenticate()
-        if exit_fixed_run:
+        # If fixedExit has been set
+        if fixedExit != None:
             for guard in guards:
                 try:
-                    test_circuit(guard, exit, controller, failures, failedGuards)
+                    test_circuit(guard, fixedExit, controller, failures, failedGuards)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + guard.fingerprint
                     failedGuards[guard.fingerprint] = getRelayInfo(guard)
                     logging.info(message)
             print_circuits(controller)
-        else:
+        # If fixedGuard has been set
+        elif fixedGuard != None:
             #for key in exits:
             for exit in AllExits:
                 try:
                     if FASTGUARD != exit.fingerprint:
-                        test_circuit(guard, exit, controller, failures, failedExits)
+                        test_circuit(FASTGUARD, exit, controller, failures, failedExits)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + str(exit.fingerprint)
@@ -251,12 +254,28 @@ def graphBuild(failures, name):
 
 
 if __name__ == "__main__":
+    
+    # get descriptor for the fixed relay
+    fixedExit = None
+    fixedGuard = None
+
+    for desc in stem.descriptor.remote.get_server_descriptors():
+        if desc.nickname == FE_NICKNAME and desc.fingerprint == FASTEXIT:
+            fixedExit = desc
+        elif desc.nickname == FG_NICKNAME and desc.fingerprint == FASTGUARD:
+            fixedGuard = desc
+
+    # check if fixed exit and fixed guard exists
+    if fixedExit == None or fixedGuard == None:
+        print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
+        exit()
+ 
     failedExits = {}
     failedGuards = {}
 
     failures = []
     print("Run with exit fixed\n")
-    build_circuits(9051, True, False)
+    build_circuits(9051, fixedExit, None, failedGuards, failedExits)
     graphBuild(failures, "FF_exit_")
     print(failedGuards)
 
