@@ -14,8 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 
-failedExits = {}
-failedGuards = {}
+
 # for info about the relays: https://onionoo.torproject.org/details?search=
 # for logging the failures
 FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
@@ -50,59 +49,59 @@ SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
 
 def query(url):
-  """
-  Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
-  """
+    """
+    Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
+    """
 
-  #output = StringIO.StringIO()
-  output = io.BytesIO()
+    #output = StringIO.StringIO()
+    output = io.BytesIO()
 
-  query = pycurl.Curl()
-  query.setopt(pycurl.URL, url)
-  query.setopt(pycurl.PROXY, 'localhost')
-  query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
-  query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
-  query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
-  query.setopt(pycurl.WRITEFUNCTION, output.write)
+    query = pycurl.Curl()
+    query.setopt(pycurl.URL, url)
+    query.setopt(pycurl.PROXY, 'localhost')
+    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
+    query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
+    query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
+    query.setopt(pycurl.WRITEFUNCTION, output.write)
 
-  try:
-    query.perform()
-    return output.getvalue().decode('UTF-8')
-  except pycurl.error as exc:
-    message = "Unable to reach " + str(url) + " " + str(exc)
-    failures.append(message)
-    raise ValueError("Unable to reach %s (%s)" % (url, exc))
+    try:
+        query.perform()
+        return output.getvalue().decode('UTF-8')
+    except pycurl.error as exc:
+        message = "Unable to reach " + str(url) + " " + str(exc)
+        failures.append(message)
+        raise ValueError("Unable to reach %s (%s)" % (url, exc))
 
 
 def scan(controller, path):
-  """
-  Fetch check.torproject.org through the given path of relays, providing back
-  the time it took.
-  """
+    """
+    Fetch check.torproject.org through the given path of relays, providing back
+    the time it took.
+    """
 
-  circuit_id = controller.new_circuit(path, await_build = True)
+    circuit_id = controller.new_circuit(path, await_build = True)
 
-  def attach_stream(stream):
-    if stream.status == 'NEW':
-      controller.attach_stream(stream.id, circuit_id)
+    def attach_stream(stream):
+        if stream.status == 'NEW':
+            controller.attach_stream(stream.id, circuit_id)
 
-  controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
+    controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
 
-  try:
-    controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
-    start_time = time.time()
+    try:
+        controller.set_conf('__LeaveStreamsUnattached', '1')  # leave stream management to us
+        start_time = time.time()
 
-    # check_page = query('https://www.google.com/')
-    check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/')
+        # check_page = query('https://www.google.com/')
+        check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/')
 
-    if 'Distributed Systems' not in check_page:
-      failures.append("Request didn't have the right content")
-      raise ValueError("Request didn't have the right content")
+        if 'Distributed Systems' not in check_page:
+            failures.append("Request didn't have the right content")
+            raise ValueError("Request didn't have the right content")
 
-    return time.time() - start_time
-  finally:
-    controller.remove_event_listener(attach_stream)
-    controller.reset_conf('__LeaveStreamsUnattached')
+        return time.time() - start_time
+    finally:
+        controller.remove_event_listener(attach_stream)
+        controller.reset_conf('__LeaveStreamsUnattached')
 
 
 def scan_requests(controller, path):
@@ -159,7 +158,7 @@ def get_relays():
 def print_circuits(controller):
     for circ in sorted(controller.get_circuits()):
         if circ.status != CircStatus.BUILT:
-          continue
+            continue
         print("")
         print("Circuit %s (%s)" % (circ.id, circ.purpose))
 
@@ -184,44 +183,37 @@ def getRelayInfo(desc):
         return {"exception" : e}
 
 
-def test_circuit(guard, exit, controller, failures):
+#
+def test_circuit(guard, exit, controller, failure_log, relay_log):
     try:
-	time_taken = scan_requests(controller, [fastguard, exit.fingerprint])
-	print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
-	message = exit.fingerprint + " => " + str(time_taken) + " seconds"
-	logging.info(message)
+    	time_taken = scan_requests(controller, [FASTGUARD, exit.fingerprint])
+    	print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
+    	message = exit.fingerprint + " => " + str(time_taken) + " seconds"
+    	logging.info(message)
     except Exception as exc:
-	if "invalid start byte" in str(exc):
-	    failures.append("invalid start byte")
-	elif "invalid continuation byte" in str(exc):
-	    failures.append("invalid continuation byte")
-	else:
-	    failures.append(str(exc))
-	message = exit.fingerprint + " => " + str(exc)
-	logging.info(message)
-	failedExits[exit.fingerprint] = getRelayInfo(exit)
-	print('%s => %s' % (exit.fingerprint, exc))
+        # Custom Log
+    	if "invalid start byte" in str(exc):
+    	    failure_log.append("invalid start byte")
+    	elif "invalid continuation byte" in str(exc):
+    	    failure_log.append("invalid continuation byte")
+    	else:
+    	    failure_log.append(str(exc))
+        # Standard Log
+    	message = exit.fingerprint + " => " + str(exc)
+    	logging.info(message)
+
+    	relay_log[exit.fingerprint] = getRelayInfo(exit)
+    	print('%s => %s' % (exit.fingerprint, exc))
 
 
-def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
+def build_circuits(PORT, exit_fixed_run, guard_fixed_run, failedGuards, failedExits):
     exits, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port = PORT) as controller:
         controller.authenticate()
         if exit_fixed_run:
             for guard in guards:
                 try:
-                    if guard.fingerprint != FASTEXIT:
-                        try:
-                            time_taken = scan_requests(controller, [guard.fingerprint, FASTEXIT])
-                            print('| %s -- %s | => %0.2f seconds' % (guard.nickname,fe_nickname, time_taken))
-                            message = guard.fingerprint + " => " + str(time_taken) + " seconds"
-                            logging.info(message)
-                        except Exception as exc:
-                            failures.append(str(exc))
-                            message = guard.fingerprint + " => " + str(exc)
-                            logging.info(message)
-                            failedGuards[guard.fingerprint] = getRelayInfo(guard)
-                            print('%s => %s ' % (guard.fingerprint, exc))
+                    test_circuit(guard, exit, controller, failures, failedGuards)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + guard.fingerprint
@@ -233,22 +225,7 @@ def build_circuits(PORT, exit_fixed_run, guard_fixed_run):
             for exit in AllExits:
                 try:
                     if FASTGUARD != exit.fingerprint:
-                        try:
-                            time_taken = scan_requests(controller, [FASTGUARD, exit.fingerprint])
-                            print('| %s -- %s | => %0.2f seconds' % (fg_nickname, exit.nickname, time_taken))
-                            message = exit.fingerprint + " => " + str(time_taken) + " seconds"
-                            logging.info(message)
-                        except Exception as exc:
-                            if "invalid start byte" in str(exc):
-                                failures.append("invalid start byte")
-                            elif "invalid continuation byte" in str(exc):
-                                failures.append("invalid continuation byte")
-                            else:
-                                failures.append(str(exc))
-                            message = exit.fingerprint + " => " + str(exc)
-                            logging.info(message)
-                            failedExits[exit.fingerprint] = getRelayInfo(exit)
-                            print('%s => %s' % (exit.fingerprint, exc))
+                        test_circuit(guard, exit, controller, failures, failedExits)
                 except stem.InvalidRequest:
                     failures.append("No such router")
                     message = "No such router " + str(exit.fingerprint)
@@ -274,17 +251,20 @@ def graphBuild(failures, name):
 
 
 if __name__ == "__main__":
-	failures = []
-	print("Run with exit fixed\n")
-	build_circuits(9051, True, False)
-	graphBuild(failures, "FF_exit_")
-	print(failedGuards)
+    failedExits = {}
+    failedGuards = {}
+
+    failures = []
+    print("Run with exit fixed\n")
+    build_circuits(9051, True, False)
+    graphBuild(failures, "FF_exit_")
+    print(failedGuards)
 
 
-	exit()
+    exit()
 
-	failures = []
-	print("Run with guard fixed\n")
-	build_circuits(9051, False, True)
-	graphBuild(failures, "FF_guard_")
-	print(failedExits)
+    failures = []
+    print("Run with guard fixed\n")
+    build_circuits(9051, False, True)
+    graphBuild(failures, "FF_guard_")
+    print(failedExits)
