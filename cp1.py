@@ -343,10 +343,10 @@ if __name__ == "__main__":
         exit()
 
     relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
-    graphBuild(fixedGFailures, "FixedGuard", 0)
-    graphBuild(fixedEFailures, "FixedExit", 1)
+    graphBuild(fixedGFailures, "DC/FixedGuard", 0)
+    graphBuild(fixedEFailures, "DC/FixedExit", 1)
     print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
     print("FixedGuard, bad exits: ", len(relayProfile["Bad"]["Exit"]))
     
-    with open('relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
+    with open('DC/relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
