@@ -202,13 +202,14 @@ def getRelayInfo(desc):
 
 
 #
-def test_circuit(guard, exit, controller, failure_log, relay_log):
+def test_circuit(guard, exit, controller, failure_log):
     try:
         time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint])
         print('| %s -- %s | => %0.2f seconds' %
               (guard.nickname, exit.nickname, time_taken))
         message = exit.fingerprint + " => " + str(time_taken) + " seconds"
         logging.info(message)
+        return 1
     except Exception as exc:
         # Custom Log
         if "invalid start byte" in str(exc):
@@ -221,58 +222,99 @@ def test_circuit(guard, exit, controller, failure_log, relay_log):
         message = "%s => %s ERROR %s" % (
             guard.fingerprint, exit.fingerprint, str(exc))
         logging.info(message)
-
-        return
-        relay_log[exit.fingerprint] = getRelayInfo(exit)
-        print(message)
-        #print('%s => %s' % (exit.fingerprint, exc))
+        return -1
 
 
-def build_circuits(PORT, fixedExit, fixedGuard, failedGuards, failedExits):
+def build_circuits(PORT, fixedExit, fixedGuard, limit=0):
+    
+    # Get JSON info about each relay node
+    relayProfile = {}
+    relayProfile["Good"] = {}
+    relayProfile["Bad"] = {}
+    relayProfile["Bad"]["Guard"] = []
+    relayProfile["Bad"]["Exit"] = []
+    relayProfile["Good"]["Guard"] = []
+    relayProfile["Good"]["Exit"] = []
+
+    fixedGFailures = []
+    fixedEFailures = []
+
     exits, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port=PORT) as controller:
         controller.authenticate()
         # If fixedExit has been set
         if fixedExit != None:
+            count = 0
+            print("Run with exit fixed\n")
             for guard in guards:
+                if limit != 0 and count > limit:
+                    break
+                count += 1
+                rinfo = getRelayInfo(guard)
                 try:
-                    test_circuit(guard, fixedExit, controller,
-                                 failures, failedGuards)
+                    if FASTEXIT == guard.fingerprint:
+                        continue
+                    if test_circuit(guard, fixedExit, controller, fixedEFailures) > 0:
+                        relayProfile["Good"]["Guard"].append(rinfo)
+                    else:
+                        relayProfile["Bad"]["Guard"].append(rinfo)
                 except stem.InvalidRequest:
-                    failures.append("No such router")
+                    fixedEFailures.append("No such router")
                     message = "No such router " + guard.fingerprint
-                    failedGuards[guard.fingerprint] = getRelayInfo(guard)
+                    relayProfile["Bad"]["Guard"].append(rinfo)
                     logging.info(message)
             print_circuits(controller)
         # If fixedGuard has been set
-        elif fixedGuard != None:
+        if fixedGuard != None:
+            print("Run with guard fixed\n")
             # for key in exits:
+            count = 0
             for exit in AllExits:
+                if limit != 0 and count > limit:
+                    break
+                count += 1
+                rinfo = getRelayInfo(exit)
                 try:
-                    if FASTGUARD != exit.fingerprint:
-                        test_circuit(FASTGUARD, exit, controller,
-                                     failures, failedExits)
+                    if FASTGUARD == exit.fingerprint:
+                        continue
+                    if test_circuit(fixedGuard, exit, controller, fixedGFailures) > 0:
+                        relayProfile["Good"]["Exit"].append(rinfo)
+                    else:
+                        relayProfile["Bad"]["Exit"].append(rinfo)
                 except stem.InvalidRequest:
-                    failures.append("No such router")
+                    fixedGFailures.append("No such router")
                     message = "No such router " + str(exit.fingerprint)
-                    failedExits[exit.fingerprint] = getRelayInfo(exit)
+                    relayProfile["Bad"]["Exit"].append(rinfo)
                     logging.info(message)
             print_circuits(controller)
+    return relayProfile, fixedEFailures, fixedGFailures
 
 
-def graphBuild(failures, name):
-    keys, counts = np.unique(failures, return_counts=True)
-    labels = np.arange(len(keys))
+def graphBuild(failures, name, fig_number):
+    '''
     plt.ylim(top=np.amax(counts))
-    plt.bar(labels, counts, width=0.4)
-    plt.xlabel('Types of Failures')
-    plt.ylabel('Frequency')
     for i in range(len(labels)):
         txt = str(labels[i]) + ": " + keys[i]
         plt.text(0, np.amax(counts) - 2 - i * 5, txt, fontsize=6, wrap=True)
-    figname = name + str(datetime.now()) + ".png"
-    plt.savefig(figname)
+    '''
+    keys, counts = np.unique(failures, return_counts=True)
+    labels = np.arange(len(keys))
 
+    index_to_key = {}
+    for i in range(len(keys)):
+        index_to_key[i] = {}
+        index_to_key[i]["key"] = keys[i]
+        index_to_key[i]["frequency"] = counts[i]
+    print(index_to_key)
+
+    plt.bar(labels, counts, width=0.4)
+    plt.figure(fig_number)
+    plt.xlabel('Types of Failures')
+    plt.ylabel('Frequency')
+    figname = name + str(datetime.now())
+    plt.savefig(figname + ".png")
+    with open(figname + ".txt", 'w') as outfile:
+        json.dump(index_to_key, outfile)
 
 if __name__ == "__main__":
 
@@ -291,19 +333,11 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
         exit()
 
-    failedExits = {}
-    failedGuards = {}
-
-    failures = []
-    print("Run with exit fixed\n")
-    build_circuits(9051, fixedExit, None, failedGuards, failedExits)
-    graphBuild(failures, "FF_exit_")
-    print(failedGuards)
-
-    exit()
-
-    failures = []
-    print("Run with guard fixed\n")
-    build_circuits(9051, False, True)
-    graphBuild(failures, "FF_guard_")
-    print(failedExits)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, 5)
+    graphBuild(fixedGFailures, "FixedGuard", 0)
+    graphBuild(fixedEFailures, "FixedExit", 1)
+    print(len(relayProfile["Bad"]["Guard"]))
+    print(len(relayProfile["Bad"]["Exit"]))
+    
+    with open('relayProfile.json', 'w') as outfile:
+        json.dump(relayProfile, outfile)
