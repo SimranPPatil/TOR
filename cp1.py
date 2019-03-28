@@ -348,5 +348,5 @@ if __name__ == "__main__":
     print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
     print("FixedGuard, bad exits: ", len(relayProfile["Bad"]["Exit"]))
     
-    with open('relayProfile.json', 'w') as outfile:
+    with open('relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
