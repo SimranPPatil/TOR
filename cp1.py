@@ -17,10 +17,11 @@ import stem.control
 import stem.process
 import logging
 import json
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
-import matplotlib
 
 
 # for info about the relays: https://onionoo.torproject.org/details?search=
@@ -302,7 +303,6 @@ def graphBuild(failures, name, fig_number):
         txt = str(labels[i]) + ": " + keys[i]
         plt.text(0, np.amax(counts) - 2 - i * 5, txt, fontsize=6, wrap=True)
     '''
-    matplotlib.use('Agg')
     keys, counts = np.unique(failures, return_counts=True)
     labels = np.arange(len(keys))
 
