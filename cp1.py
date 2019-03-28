@@ -10,7 +10,7 @@ import collections
 # import pycurl
 import io
 import requests
-import socks
+# import socks
 import socket
 import urllib
 import stem.control
