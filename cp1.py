@@ -342,7 +342,7 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, 30)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
     graphBuild(fixedGFailures, "FixedGuard", 0)
     graphBuild(fixedEFailures, "FixedExit", 1)
     print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
