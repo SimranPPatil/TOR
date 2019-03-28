@@ -25484,3 +25484,91 @@ stem.CircuitExtensionFailed: Circuit failed to be created: TIMEOUT
 2019-03-28 00:39:28,860 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
 2019-03-28 00:39:29,400 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=003D78825E0B9609EECFF5E4E0529717772E53C7 HTTP/1.1" 200 3817
 2019-03-28 00:39:29,693 INFO     Error while receiving a control message (SocketClosed): empty socket content
+2019-03-28 01:00:50,875 INFO     
+
+2019-03-28 01:00:50,875 INFO     2019-03-28 01:00:50.875884
+2019-03-28 01:00:50,875 INFO     
+
+2019-03-28 01:00:50,876 INFO     2019-03-28 01:00:50.876057
+2019-03-28 01:01:23,781 INFO     
+
+2019-03-28 01:01:23,781 INFO     2019-03-28 01:01:23.781549
+2019-03-28 01:01:23,781 INFO     
+
+2019-03-28 01:01:23,781 INFO     2019-03-28 01:01:23.781700
+2019-03-28 01:01:28,482 TRACE    Descriptors retrieved from 'http://131.188.40.189:80/tor/server/all' in 4.70s
+2019-03-28 01:01:31,110 TRACE    Descriptors retrieved from 'http://199.58.81.140:80/tor/status-vote/current/consensus' in 0.84s
+2019-03-28 01:01:31,816 DEBUG    GETCONF __owningcontrollerprocess (runtime: 0.0003)
+2019-03-28 01:01:31,958 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:32,440 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=000C1F7CD2FEA073B911DC94A1600EC2F117DF0B HTTP/1.1" 200 1259
+2019-03-28 01:01:32,444 DEBUG    GETINFO version (runtime: 0.0005)
+2019-03-28 01:01:33,053 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0057)
+2019-03-28 01:01:33,078 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:33,214 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:33,223 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0049)
+2019-03-28 01:01:33,224 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.16478681564331055 seconds
+2019-03-28 01:01:33,226 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:33,748 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=0011BD2485AD45D984EC4159C88FC066E5E3300E HTTP/1.1" 200 1605
+2019-03-28 01:01:34,122 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0052)
+2019-03-28 01:01:34,124 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:34,267 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:34,276 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0046)
+2019-03-28 01:01:34,276 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.14879798889160156 seconds
+2019-03-28 01:01:34,279 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:34,944 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=001524DD403D729F08F7E5D77813EF12756CFA8D HTTP/1.1" 200 1507
+2019-03-28 01:01:35,721 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0046)
+2019-03-28 01:01:35,724 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:35,846 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:35,855 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0044)
+2019-03-28 01:01:35,855 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.1285080909729004 seconds
+2019-03-28 01:01:35,858 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:36,428 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=003BFA1B6CC5CBEFD5D0082F8FC9AF2A8868A8FB HTTP/1.1" 200 1238
+2019-03-28 01:01:37,538 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0054)
+2019-03-28 01:01:37,540 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:37,655 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:37,662 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0040)
+2019-03-28 01:01:37,662 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.11949586868286133 seconds
+2019-03-28 01:01:37,664 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:38,195 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=003D78825E0B9609EECFF5E4E0529717772E53C7 HTTP/1.1" 200 3817
+2019-03-28 01:01:38,816 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0049)
+2019-03-28 01:01:38,819 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:38,977 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:38,985 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0045)
+2019-03-28 01:01:38,985 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.16399502754211426 seconds
+2019-03-28 01:01:38,988 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:39,501 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=008E7B70C3B4A7520B5BEAB8067ABCDC8E63F1FD HTTP/1.1" 200 1262
+2019-03-28 01:01:40,485 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0050)
+2019-03-28 01:01:40,487 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:40,619 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:40,627 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0045)
+2019-03-28 01:01:40,627 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.13719511032104492 seconds
+2019-03-28 01:01:40,630 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:41,185 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=00CCE6A84E6D63A1A42E105839BC8ED5D4B16669 HTTP/1.1" 200 1235
+2019-03-28 01:01:42,173 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0051)
+2019-03-28 01:01:42,175 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:42,321 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:42,330 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0047)
+2019-03-28 01:01:42,330 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.1521310806274414 seconds
+2019-03-28 01:01:42,333 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:42,896 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=00D2269DBC1A39D137160789C7B614197DB30C70 HTTP/1.1" 200 1168
+2019-03-28 01:01:43,688 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0051)
+2019-03-28 01:01:43,691 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:43,821 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:43,830 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0045)
+2019-03-28 01:01:43,830 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.13620400428771973 seconds
+2019-03-28 01:01:43,832 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:44,393 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=00E1649E69FF91D7F01E74A5E62EF14F7D9915E4 HTTP/1.1" 200 1357
+2019-03-28 01:01:45,199 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0052)
+2019-03-28 01:01:45,201 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:45,342 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:45,351 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0044)
+2019-03-28 01:01:45,351 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.1469738483428955 seconds
+2019-03-28 01:01:45,354 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:45,893 DEBUG    https://onionoo.torproject.org:443 "GET /details?search=0111BA9B604669E636FFD5B503F382A4B7AD6E80 HTTP/1.1" 200 1569
+2019-03-28 01:01:46,783 DEBUG    SETCONF __LeaveStreamsUnattached="1" (runtime: 0.0050)
+2019-03-28 01:01:46,786 DEBUG    Starting new HTTPS connection (1): courses.engr.illinois.edu:443
+2019-03-28 01:01:46,929 DEBUG    https://courses.engr.illinois.edu:443 "GET /ece428/sp2019/ HTTP/1.1" 200 4354
+2019-03-28 01:01:46,937 DEBUG    RESETCONF __LeaveStreamsUnattached (runtime: 0.0045)
+2019-03-28 01:01:46,938 INFO     BC630CBBB518BE7E9F4E09712AB0269E9DC7D626 => 0.14919710159301758 seconds
+2019-03-28 01:01:46,940 DEBUG    Starting new HTTPS connection (1): onionoo.torproject.org:443
+2019-03-28 01:01:47,408 INFO     Error while receiving a control message (SocketClosed): received exception "read of closed file"

@@ -7,7 +7,7 @@ import stem.descriptor.remote
 import random
 import time
 import collections
-import pycurl
+# import pycurl
 import io
 import requests
 import socks
@@ -58,7 +58,7 @@ FE_NICKNAME = "IPredator"
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
 
-
+'''
 def query(url, failures):
     """
     Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
@@ -114,7 +114,7 @@ def scan(controller, path, failures):
     finally:
         controller.remove_event_listener(attach_stream)
         controller.reset_conf('__LeaveStreamsUnattached')
-
+'''
 
 def scan_requests(controller, path, failures):
     """
