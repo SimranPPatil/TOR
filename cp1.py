@@ -59,7 +59,7 @@ SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
 
 
-def query(url):
+def query(url, failures):
     """
     Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
     """
@@ -84,7 +84,7 @@ def query(url):
         raise ValueError("Unable to reach %s (%s)" % (url, exc))
 
 
-def scan(controller, path):
+def scan(controller, path, failures):
     """
     Fetch check.torproject.org through the given path of relays, providing back
     the time it took.
@@ -104,7 +104,7 @@ def scan(controller, path):
         start_time = time.time()
 
         # check_page = query('https://www.google.com/')
-        check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/')
+        check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/', failures)
 
         if 'Distributed Systems' not in check_page:
             failures.append("Request didn't have the right content")
@@ -116,7 +116,7 @@ def scan(controller, path):
         controller.reset_conf('__LeaveStreamsUnattached')
 
 
-def scan_requests(controller, path):
+def scan_requests(controller, path, failures):
     """
     Fetch check.torproject.org through the given path of relays, providing back
     the time it took.
@@ -204,7 +204,7 @@ def getRelayInfo(desc):
 #
 def test_circuit(guard, exit, controller, failure_log):
     try:
-        time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint])
+        time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
         print('| %s -- %s | => %0.2f seconds' %
               (guard.nickname, exit.nickname, time_taken))
         message = exit.fingerprint + " => " + str(time_taken) + " seconds"
@@ -216,6 +216,10 @@ def test_circuit(guard, exit, controller, failure_log):
             failure_log.append("invalid start byte")
         elif "invalid continuation byte" in str(exc):
             failure_log.append("invalid continuation byte")
+        elif "No descriptor" in str(exc):
+            failure_log.append("No descriptor")
+        elif "No such router" in str(exc):
+            failure_log.append("No such router")
         else:
             failure_log.append(str(exc))
         # Standard Log
@@ -304,11 +308,14 @@ def graphBuild(failures, name, fig_number):
     for i in range(len(keys)):
         index_to_key[i] = {}
         index_to_key[i]["key"] = keys[i]
-        index_to_key[i]["frequency"] = counts[i]
+        index_to_key[i]["frequency"] = str(counts[i])
     print(index_to_key)
 
-    plt.bar(labels, counts, width=0.4)
     plt.figure(fig_number)
+    l = []
+    for label in labels:
+      l.append(str(label))
+    plt.bar(l, counts)
     plt.xlabel('Types of Failures')
     plt.ylabel('Frequency')
     figname = name + str(datetime.now())
@@ -333,7 +340,7 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, 5)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
     graphBuild(fixedGFailures, "FixedGuard", 0)
     graphBuild(fixedEFailures, "FixedExit", 1)
     print(len(relayProfile["Bad"]["Guard"]))
