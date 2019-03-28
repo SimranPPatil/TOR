@@ -342,11 +342,11 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, 30)
     graphBuild(fixedGFailures, "FixedGuard", 0)
     graphBuild(fixedEFailures, "FixedExit", 1)
-    print(len(relayProfile["Bad"]["Guard"]))
-    print(len(relayProfile["Bad"]["Exit"]))
+    print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
+    print("FixedGuard, bad exits: ", len(relayProfile["Bad"]["Exit"]))
     
     with open('relayProfile.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
