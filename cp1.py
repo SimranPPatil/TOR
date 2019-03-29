@@ -169,10 +169,14 @@ def get_relays():
         message = "Unable to retrieve the consensus: " + str(exc)
         logging.info(message)
     od = collections.OrderedDict(sorted(exits.items()))
+    print("Guards fetched: ", len(guards))
+    print("Exits fetched: ", len(AllExits))
     return od, guards, AllExits
 
 
 def print_circuits(controller):
+    count = 0
+    print("Circuits: ", len(controller.get_circuits()))
     for circ in sorted(controller.get_circuits()):
         if circ.status != CircStatus.BUILT:
             continue
@@ -180,11 +184,13 @@ def print_circuits(controller):
         print("Circuit %s (%s)" % (circ.id, circ.purpose))
 
         for i, entry in enumerate(circ.path):
+            count += 1
             div = '+' if (i == len(circ.path) - 1) else '|'
             fingerprint, nickname = entry
             desc = controller.get_network_status(fingerprint, None)
             address = desc.address if desc else 'unknown'
             print(" %s- %s (%s, %s)" % (div, fingerprint, nickname, address))
+    print("circuits built: ", count)
 
 
 def getFlags(Descflags, desc):
