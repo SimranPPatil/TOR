@@ -1,0 +1,1 @@
+{"0": {"key": "Circuit failed to be created: DESTROYED", "frequency": "5"}, "1": {"key": "Circuit failed to be created: TIMEOUT", "frequency": "35"}, "2": {"key": "No descriptor", "frequency": "6"}, "3": {"key": "No such router", "frequency": "10"}}
