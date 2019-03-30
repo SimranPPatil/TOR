@@ -215,7 +215,7 @@ def test_circuit(guard, exit, controller, failure_log):
         time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
         print('| %s -- %s | => %0.2f seconds' %
               (guard.nickname, exit.nickname, time_taken))
-        message = exit.fingerprint + " => " + str(time_taken) + " seconds"
+        message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds"
         logging.info(message)
         return 1
     except Exception as exc:
@@ -345,7 +345,7 @@ if __name__ == "__main__":
 
     # check if fixed exit and fixed guard exists
     if fixedExit == None or fixedGuard == None:
-        print("COULD NOT FIND FIXEDEXIT OR FIXEDRELAY")
+        print("COULD NOT FIND FIXEDEXIT OR FIXEDGUARD")
         exit()
 
     relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
