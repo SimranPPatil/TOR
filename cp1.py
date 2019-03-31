@@ -63,63 +63,6 @@ PROXIES = {
     'http':'socks5h://127.0.0.1:'+str(SOCKS_PORT),
     'https':'socks5h://127.0.0.1:'+str(SOCKS_PORT)
 }
-'''
-def query(url, failures):
-    """
-    Uses pycurl to fetch a site using the proxy on the SOCKS_PORT.
-    """
-
-    #output = StringIO.StringIO()
-    output = io.BytesIO()
-
-    query = pycurl.Curl()
-    query.setopt(pycurl.URL, url)
-    query.setopt(pycurl.PROXY, 'localhost')
-    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
-    query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
-    query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
-    query.setopt(pycurl.WRITEFUNCTION, output.write)
-
-    try:
-        query.perform()
-        return output.getvalue().decode('UTF-8')
-    except pycurl.error as exc:
-        message = "Unable to reach " + str(url) + " " + str(exc)
-        failures.append(message)
-        raise ValueError("Unable to reach %s (%s)" % (url, exc))
-
-
-def scan(controller, path, failures):
-    """
-    Fetch check.torproject.org through the given path of relays, providing back
-    the time it took.
-    """
-
-    circuit_id = controller.new_circuit(path, await_build=True)
-
-    def attach_stream(stream):
-        if stream.status == 'NEW':
-            controller.attach_stream(stream.id, circuit_id)
-
-    controller.add_event_listener(attach_stream, stem.control.EventType.STREAM)
-
-    try:
-        # leave stream management to us
-        controller.set_conf('__LeaveStreamsUnattached', '1')
-        start_time = time.time()
-
-        # check_page = query('https://www.google.com/')
-        check_page = query('https://courses.engr.illinois.edu/ece428/sp2019/', failures)
-
-        if 'Distributed Systems' not in check_page:
-            failures.append("Request didn't have the right content")
-            raise ValueError("Request didn't have the right content")
-
-        return time.time() - start_time
-    finally:
-        controller.remove_event_listener(attach_stream)
-        controller.reset_conf('__LeaveStreamsUnattached')
-'''
 
 def scan_requests(controller, path, failures):
     """
