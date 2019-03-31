@@ -1,0 +1,1 @@
+{"0": {"key": "Circuit failed to be created: CHANNEL_CLOSED", "frequency": "20"}, "1": {"key": "Circuit failed to be created: DESTROYED", "frequency": "32"}, "2": {"key": "Circuit failed to be created: TIMEOUT", "frequency": "47"}, "3": {"key": "No descriptor", "frequency": "2"}}
