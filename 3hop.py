@@ -43,7 +43,10 @@ FE_NICKNAME = "IPredator"
 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
-
+PROXIES = {
+    'http':'socks5h://127.0.0.1:'+str(SOCKS_PORT),
+    'https':'socks5h://127.0.0.1:'+str(SOCKS_PORT)
+}
 
 def scan_requests(controller, path, failures):
     """
@@ -66,7 +69,7 @@ def scan_requests(controller, path, failures):
 
         # check_page = query('https://www.google.com/')
         check_page = requests.get(
-            'https://courses.engr.illinois.edu/ece428/sp2019/')
+            'https://courses.engr.illinois.edu/ece428/sp2019/', proxies=PROXIES)
 
         if 'Distributed Systems' not in check_page.text:
             failures.append("Request didn't have the right content")
