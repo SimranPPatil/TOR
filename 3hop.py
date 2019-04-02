@@ -69,9 +69,9 @@ def scan_requests(controller, path, failures):
 
         # check_page = query('https://www.google.com/')
         check_page = requests.get(
-            'https://courses.engr.illinois.edu/ece428/sp2019/', proxies=PROXIES)
+            'https://en.wikipedia.org/wiki/Libvirt', proxies=PROXIES)
 
-        if 'Distributed Systems' not in check_page.text:
+        if 'libvirt' not in check_page.text:
             failures.append("Request didn't have the right content")
             raise ValueError("Request didn't have the right content")
 
