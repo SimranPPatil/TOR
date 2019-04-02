@@ -121,7 +121,7 @@ def getRelayInfo(desc):
         r = requests.get(url)
         return json.loads(r.text)
     except Exception as e:
-        return {"exception": e}
+        return {"exception": str(e)}
 
 
 def test_circuit(guard, exit, middle, controller, failure_log):
