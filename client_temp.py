@@ -1,16 +1,17 @@
 '''
 This script builds several two hop circuits and does failure measurements corresponding to each
+
+Task: Checking middle relay reliability, building three hop circuits
 '''
 
 from stem import CircStatus, Flag
+import stem.client
 import stem.descriptor.remote
 import random
 import time
 import collections
-# import pycurl
 import io
 import requests
-# import socks
 import socket
 import urllib
 import stem.control
@@ -28,24 +29,8 @@ from datetime import datetime
 # for logging the failures
 FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
 # logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
-logging.basicConfig(filename='failures.log',
+logging.basicConfig(filename='failures3.log',
                     level=logging.DEBUG, format=FORMAT)
-logging.info("\n")
-logging.info(str(datetime.now()))
-
-
-def setup_custom_logging(name):
-    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
-                                  datefmt='%Y-%m-%d %H:%M:%S')
-    handler = logging.FileHandler('failures.log', mode="a+")
-    handler.setFormatter(formatter)
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
-    return logger
-
-
-# logger = setup_custom_logger('failures')
 logging.info("\n")
 logging.info(str(datetime.now()))
 
@@ -97,27 +82,18 @@ def scan_requests(controller, path, failures):
         controller.reset_conf('__LeaveStreamsUnattached')
 
 
-# fetches the exit relays and other relays from the current consensus
-# TODO: check for guard policy, if any
+# fetches the middle relays from the current consensus
 def get_relays():
-    exits = {}
-    guards = []
-    AllExits = []
+    middle = []
     try:
         for desc in stem.descriptor.remote.get_consensus().run():
             if 'Running' in desc.flags:
-                if 'Guard' in desc.flags:
-                    guards.append(desc)
-                if desc.exit_policy.is_exiting_allowed():
-                    AllExits.append(desc)
-                    exits.setdefault(desc.bandwidth, []).append(desc)
+                middle.append(desc)
     except Exception as exc:
         message = "Unable to retrieve the consensus: " + str(exc)
         logging.info(message)
-    od = collections.OrderedDict(sorted(exits.items()))
-    print("Guards fetched: ", len(guards))
-    print("Exits fetched: ", len(AllExits))
-    return od, guards, AllExits
+    print("Relays fetched: ", len(middle))
+    return middle
 
 
 def print_circuits(controller):
@@ -139,12 +115,6 @@ def print_circuits(controller):
     print("circuits built: ", count)
 
 
-def getFlags(Descflags, desc):
-    flags = " ".join(desc.flags)
-    message = desc.fingerprint + " => FLAGS: " + flags
-    Descflags.setdefault(desc.fingerprint, []).append(desc.flags)
-
-
 def getRelayInfo(desc):
     url = "https://onionoo.torproject.org/details?search=" + \
         str(desc.fingerprint)
@@ -155,17 +125,16 @@ def getRelayInfo(desc):
         return {"exception": e}
 
 
-#
-def test_circuit(guard, exit, controller, failure_log):
+def test_circuit(guard, exit, middle, controller, failure_log):
     try:
-        time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
-        print('| %s -- %s | => %0.2f seconds' %
-              (guard.nickname, exit.nickname, time_taken))
-        message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds"
+        time_taken = scan_requests(controller, [guard.fingerprint, middle.fingerprint, exit.fingerprint], failure_log)
+        print('| %s -- %s -- %s | => %0.2f seconds' %
+              (guard.nickname, middle.nickname, exit.nickname, time_taken))
+        message = middle.fingerprint + " => " + str(time_taken) + " seconds"
         logging.info(message)
         return 1
     except Exception as exc:
-        # Custom Log
+        # Custom Log for graph
         if "invalid start byte" in str(exc):
             failure_log.append("invalid start byte")
         elif "invalid continuation byte" in str(exc):
@@ -179,8 +148,8 @@ def test_circuit(guard, exit, controller, failure_log):
         else:
             failure_log.append(str(exc))
         # Standard Log
-        message = "%s => %s ERROR %s" % (
-            guard.fingerprint, exit.fingerprint, str(exc))
+        message = "%s => ERROR %s" % (
+            middle.fingerprint, str(exc))
         logging.info(message)
         return -1
 
@@ -189,65 +158,38 @@ def build_circuits(PORT, fixedExit, fixedGuard, limit=0):
     
     # Get JSON info about each relay node
     relayProfile = {}
-    relayProfile["Good"] = {}
-    relayProfile["Bad"] = {}
-    relayProfile["Bad"]["Guard"] = []
-    relayProfile["Bad"]["Exit"] = []
-    relayProfile["Good"]["Guard"] = []
-    relayProfile["Good"]["Exit"] = []
+    relayProfile["Middle"] = {}
+    relayProfile["Middle"]["Good"] = []
+    relayProfile["Middle"]["Bad"] = []
 
-    fixedGFailures = []
-    fixedEFailures = []
-
-    exits, guards, AllExits = get_relays()
+    MiddleFailures = []
+    
+    middle = get_relays()
     with stem.control.Controller.from_port(port=PORT) as controller:
         controller.authenticate()
-        # If fixedExit has been set
-        if fixedExit != None:
+        if fixedExit != None and fixedGuard != None:
             count = 0
-            print("Run with exit fixed\n")
-            for guard in guards:
+            print("3 Hop: Run with guard and exit fixed\n")
+            for relay in middle:
                 if limit != 0 and count > limit:
                     break
                 count += 1
-                rinfo = getRelayInfo(guard)
+                rinfo = getRelayInfo(relay)
                 try:
-                    if FASTEXIT == guard.fingerprint:
+                    if FASTEXIT == relay.fingerprint or FASTGUARD == relay.fingerprint or FASTEXIT == FASTGUARD:
                         continue
-                    if test_circuit(guard, fixedExit, controller, fixedEFailures) > 0:
-                        relayProfile["Good"]["Guard"].append(rinfo)
+                    if test_circuit(fixedGuard, fixedExit, relay, controller, MiddleFailures) > 0:
+                        relayProfile["Middle"]["Good"].append(rinfo)
                     else:
-                        relayProfile["Bad"]["Guard"].append(rinfo)
+                        relayProfile["Middle"]["Bad"].append(rinfo)
                 except stem.InvalidRequest:
-                    fixedEFailures.append("No such router")
-                    message = "No such router " + guard.fingerprint
-                    relayProfile["Bad"]["Guard"].append(rinfo)
+                    MiddleFailures.append("No such router")
+                    message = "No such router " + relay.fingerprint
+                    relayProfile["Middle"]["Bad"].append(rinfo)
                     logging.info(message)
             print_circuits(controller)
-        # If fixedGuard has been set
-        if fixedGuard != None:
-            print("Run with guard fixed\n")
-            # for key in exits:
-            count = 0
-            for exit in AllExits:
-                if limit != 0 and count > limit:
-                    break
-                count += 1
-                rinfo = getRelayInfo(exit)
-                try:
-                    if FASTGUARD == exit.fingerprint:
-                        continue
-                    if test_circuit(fixedGuard, exit, controller, fixedGFailures) > 0:
-                        relayProfile["Good"]["Exit"].append(rinfo)
-                    else:
-                        relayProfile["Bad"]["Exit"].append(rinfo)
-                except stem.InvalidRequest:
-                    fixedGFailures.append("No such router")
-                    message = "No such router " + str(exit.fingerprint)
-                    relayProfile["Bad"]["Exit"].append(rinfo)
-                    logging.info(message)
-            print_circuits(controller)
-    return relayProfile, fixedEFailures, fixedGFailures
+        
+    return relayProfile, MiddleFailures
 
 
 def graphBuild(failures, name, fig_number):
@@ -296,11 +238,10 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDGUARD")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
-    graphBuild(fixedGFailures, "DC/FixedGuard", 0)
-    graphBuild(fixedEFailures, "DC/FixedExit", 1)
-    print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
-    print("FixedGuard, bad exits: ", len(relayProfile["Bad"]["Exit"]))
+    relayProfile, MiddleFailures = build_circuits(9051, fixedExit, fixedGuard)
+    graphBuild(MiddleFailures, "DC/MiddleFailures", 0)
+    print("bad middle relays: ", len(relayProfile["Middle"]["Bad"]))
+    print("good middle relays: ", len(relayProfile["Middle"]["Good"]))
     
-    with open('DC/relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
+    with open('DC/MiddleRelayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)

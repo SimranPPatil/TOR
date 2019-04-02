@@ -142,6 +142,8 @@ def test_circuit(guard, exit, middle, controller, failure_log):
             failure_log.append("No descriptor")
         elif "No such router" in str(exc):
             failure_log.append("No such router")
+        elif "Failed to establish a new connection" in str(exc):
+            failure_log.append("Failed to establish a new connection")
         else:
             failure_log.append(str(exc))
         # Standard Log
