@@ -134,23 +134,26 @@ TOTAL = 0
 with open('data.csv', "a") as csvfile:
     filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
     for filename in glob.glob('./DC/relayProfile*.json'):
-        run_date = filename.split('relayProfile')[1].split(' ')[0]
-        run_time = filename.split('relayProfile')[1].split(' ')[1].split('.')[0]
-        with open(filename) as rp:
-            d = json.load(rp)
-            good_guard = d['Good']['Guard']
-            good_exit = d['Good']['Exit']
-            bad_guard = d['Bad']['Guard']
-            bad_exit = d['Bad']['Exit']
-            TOTAL += len(good_exit) + len(good_guard) + len(bad_exit) + len(bad_guard)
-            for node in good_guard:
-                writer_good(node, 'Good_Guard', filewriter)
-            for node in good_exit:
-                writer_good(node, 'Good_Exit', filewriter)
-            for node in bad_guard:
-                writer_bad(node, filewriter, run_date, run_time, 'Bad_Guard: ')
-            for node in bad_exit:
-                writer_bad(node, filewriter, run_date, run_time, 'Bad_Exit: ')
+        try:
+            run_date = filename.split('relayProfile')[1].split(' ')[0]
+            run_time = filename.split('relayProfile')[1].split(' ')[1].split('.')[0]
+            with open(filename) as rp:
+                d = json.load(rp)
+                good_guard = d['Good']['Guard']
+                good_exit = d['Good']['Exit']
+                bad_guard = d['Bad']['Guard']
+                bad_exit = d['Bad']['Exit']
+                TOTAL += len(good_exit) + len(good_guard) + len(bad_exit) + len(bad_guard)
+                for node in good_guard:
+                    writer_good(node, 'Good_Guard', filewriter)
+                for node in good_exit:
+                    writer_good(node, 'Good_Exit', filewriter)
+                for node in bad_guard:
+                    writer_bad(node, filewriter, run_date, run_time, 'Bad_Guard: ')
+                for node in bad_exit:
+                    writer_bad(node, filewriter, run_date, run_time, 'Bad_Exit: ')
+        except:
+            print(filename)
 
 print(TOTAL)
 print(FL, OTHERS)
