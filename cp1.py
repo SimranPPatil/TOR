@@ -22,7 +22,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+import hashlib
 
+
+PAYLOAD_LINK = "https://n5.nz/100KiB"
+PAYLOAD_HASH = "48936b426d70b36d633834782290a8d1af45a4d67c3c1d56704e50a0d045eed6"
 
 # for info about the relays: https://onionoo.torproject.org/details?search=
 # for logging the failures
@@ -32,6 +36,18 @@ logging.basicConfig(filename='failures.log',
                     level=logging.DEBUG, format=FORMAT)
 logging.info("\n")
 logging.info(str(datetime.now()))
+
+def hash_file(file_name):
+    hasher = hashlib.sha256()
+    with open(file_name,'rb') as afile:
+        buf = afile.read()
+        hasher.update(buf)
+    return hasher.hexdigest()
+
+def hash_bin(bins):
+    hasher = hashlib.sha256()
+    hasher.update(bins)
+    return hasher.hexdigest()
 
 
 def setup_custom_logging(name):
@@ -85,10 +101,10 @@ def scan_requests(controller, path, failures):
 
         # check_page = query('https://www.google.com/')
         check_page = requests.get(
-            'https://en.wikipedia.org/wiki/Libvirt', proxies=PROXIES)
+            PAYLOAD_LINK, proxies=PROXIES)
 
-        if 'libvirt' not in check_page.text:
-            failures.append("Request didn't have the right content")
+        if hash_bin(check_page.content) != PAYLOAD_HASH:
+            failures.append("WRONG DIGEST: Request didn't have the right content")
             raise ValueError("Request didn't have the right content")
 
         return time.time() - start_time
@@ -152,7 +168,7 @@ def getRelayInfo(desc):
         r = requests.get(url)
         return json.loads(r.text)
     except Exception as e:
-        return {"exception": e}
+        return {"exception": str(e)}
 
 
 #
@@ -296,7 +312,7 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDGUARD")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, limit=10)
     graphBuild(fixedGFailures, "DC/FixedGuard", 0)
     graphBuild(fixedEFailures, "DC/FixedExit", 1)
     print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
