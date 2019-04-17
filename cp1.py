@@ -358,7 +358,7 @@ if __name__ == "__main__":
     with open('DC/relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
 
-    relayProfile, MiddleFailures = build_3hop_circuits(9051, fixedExit, fixedGuard)
+    relayProfile, MiddleFailures = build_3hop_circuits(9051, fixedExit, fixedGuard, limit=10)
     graphBuild(MiddleFailures, "DC/MiddleFailures", 0)
     print("bad middle relays: ", len(relayProfile["Middle"]["Bad"]))
     print("good middle relays: ", len(relayProfile["Middle"]["Good"]))
