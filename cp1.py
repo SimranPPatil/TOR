@@ -265,6 +265,43 @@ def build_circuits(PORT, fixedExit, fixedGuard, limit=0):
             print_circuits(controller)
     return relayProfile, fixedEFailures, fixedGFailures
 
+def build_3hop_circuits(PORT, fixedExit, fixedGuard, limit=0):
+    
+    # Get JSON info about each relay node
+    relayProfile = {}
+    relayProfile["Middle"] = {}
+    relayProfile["Middle"]["Good"] = []
+    relayProfile["Middle"]["Bad"] = []
+
+    MiddleFailures = []
+    
+    middle = get_relays()
+    with stem.control.Controller.from_port(port=PORT) as controller:
+        controller.authenticate()
+        if fixedExit != None and fixedGuard != None:
+            count = 0
+            print("3 Hop: Run with guard and exit fixed\n")
+            for relay in middle:
+                if limit != 0 and count > limit:
+                    break
+                count += 1
+                rinfo = getRelayInfo(relay)
+                try:
+                    if FASTEXIT == relay.fingerprint or FASTGUARD == relay.fingerprint or FASTEXIT == FASTGUARD:
+                        continue
+                    if test_circuit(fixedGuard, fixedExit, relay, controller, MiddleFailures) > 0:
+                        relayProfile["Middle"]["Good"].append(rinfo)
+                    else:
+                        relayProfile["Middle"]["Bad"].append(rinfo)
+                except stem.InvalidRequest:
+                    MiddleFailures.append("No such router")
+                    message = "No such router " + relay.fingerprint
+                    relayProfile["Middle"]["Bad"].append(rinfo)
+                    logging.info(message)
+            print_circuits(controller)
+        
+    return relayProfile, MiddleFailures
+
 
 def graphBuild(failures, name, fig_number):
     '''
@@ -319,4 +356,11 @@ if __name__ == "__main__":
     print("FixedGuard, bad exits: ", len(relayProfile["Bad"]["Exit"]))
     
     with open('DC/relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
+        json.dump(relayProfile, outfile)
+
+    relayProfile, MiddleFailures = build_circuits(9051, fixedExit, fixedGuard)
+    graphBuild(MiddleFailures, "DC/MiddleFailures", 0)
+    print("bad middle relays: ", len(relayProfile["Middle"]["Bad"]))
+    print("good middle relays: ", len(relayProfile["Middle"]["Good"]))
+    with open('DC/MiddleRelayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
