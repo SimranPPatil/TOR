@@ -1,7 +1,7 @@
 import glob
 import json
 import csv
-import re
+import re, sys
 from datetime import datetime
 
 OUTER_ATTRIBUTES = ["version", "build_revision"]
@@ -18,7 +18,7 @@ with open('failures3.log') as logfile:
         LOGFILE.append(line)
 
 EPOCHS = {}
-
+historic_bad = {}
 FL = 0
 
 for filename in glob.glob('./DC/MiddleRelayProfile*.json'):
@@ -126,7 +126,8 @@ def writer_bad(node, filewriter, run_date, run_time, nodetype):
                 if error_msg != "":
                     error_msg = nodetype + error_msg.strip('\n')
                     row.append(error_msg)
-                    filewriter.writerow(row)
+                    historic_bad.setdefault(fingerprint, []).append(error_msg)
+                    # filewriter.writerow(row)
                     FL += 1
                 else:
                     noerr = 1
@@ -150,10 +151,25 @@ with open('data3nf.csv', "a") as csvfile:
                 for node in middle_good:
                     writer_good(node, 'middle_good', filewriter)
                 for node in middle_bad:
-                    #writer_bad(node, filewriter, run_date, run_time, 'middle_bad: ')
+                    writer_bad(node, filewriter, run_date, run_time, 'middle_bad: ')
                     writer_good(node, 'middle_bad', filewriter)
+                    '''
+                    try:
+                        for n in node['relays']:
+                            fp = str(n['fingerprint'])
+                            historic_bad.setdefault(fp, 0)
+                            historic_bad[fp] += 1
+                    except Exception as e:
+                        print(e)
+                    '''
             except Exception as e:
                 print("exception: ", e)
+                exc_type, _, exc_tb = sys.exc_info()
+                print(exc_type, exc_tb.tb_lineno, "\n\n")
 
 print(TOTAL)
 print(FL)
+
+
+with open("bad_middle_freq.json", "w+") as f:
+    json.dump(historic_bad, f)

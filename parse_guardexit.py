@@ -18,7 +18,7 @@ with open('failures.log') as logfile:
         LOGFILE.append(line)
 
 EPOCHS = {}
-
+historic_bad = {}
 FL = 0
 OTHERS = 0
 
@@ -123,7 +123,8 @@ def writer_bad(node, filewriter, run_date, run_time, nodetype):
                 if error_msg != "":
                     error_msg = nodetype + error_msg.strip('\n')
                     row.append(error_msg)
-                    filewriter.writerow(row)
+                    historic_bad.setdefault(fingerprint, []).append(error_msg)
+                    # filewriter.writerow(row)
                     FL += 1
                 else:
                     noerr = 1
@@ -138,25 +139,53 @@ with open('datanf.csv', "a") as csvfile:
         try:
             run_date = filename.split('relayProfile')[1].split(' ')[0]
             run_time = filename.split('relayProfile')[1].split(' ')[1].split('.')[0]
+            print(filename)
             with open(filename) as rp:
-                d = json.load(rp)
-                good_guard = d['Good']['Guard']
-                good_exit = d['Good']['Exit']
-                bad_guard = d['Bad']['Guard']
-                bad_exit = d['Bad']['Exit']
-                TOTAL += len(good_exit) + len(good_guard) + len(bad_exit) + len(bad_guard)
-                for node in good_guard:
-                    writer_good(node, 'Good_Guard', filewriter)
-                for node in good_exit:
-                    writer_good(node, 'Good_Exit', filewriter)
-                for node in bad_guard:
-                    #writer_bad(node, filewriter, run_date, run_time, 'Bad_Guard: ')
-                    writer_good(node, 'Bad_Guard', filewriter)
-                for node in bad_exit:
-                    #writer_bad(node, filewriter, run_date, run_time, 'Bad_Exit: ')
-                    writer_good(node, 'Bad_Exit', filewriter)
+                try:
+                    d = json.load(rp)
+                    good_guard = d['Good']['Guard']
+                    good_exit = d['Good']['Exit']
+                    bad_guard = d['Bad']['Guard']
+                    bad_exit = d['Bad']['Exit']
+                    TOTAL += len(good_exit) + len(good_guard) + len(bad_exit) + len(bad_guard)
+                    for node in good_guard:
+                        writer_good(node, 'Good_Guard', filewriter)
+                    for node in good_exit:
+                        writer_good(node, 'Good_Exit', filewriter)
+                    for node in bad_guard:
+                        writer_bad(node, filewriter, run_date, run_time, 'Bad_Guard: ')
+                        writer_good(node, 'Bad_Guard', filewriter)
+                        '''
+                        try:
+                            for n in node['relays']:
+                                fp = str(n['fingerprint'])
+                                historic_bad.setdefault(fp, 0)
+                                historic_bad[fp] += 1
+                        except Exception as e:
+                            print(e)
+                        '''
+                    for node in bad_exit:
+                        writer_bad(node, filewriter, run_date, run_time, 'Bad_Exit: ')
+                        writer_good(node, 'Bad_Exit', filewriter)
+                        '''
+                        try:
+                            for n in node['relays']:
+                                fp = str(n['fingerprint'])
+                                historic_bad.setdefault(fp, 0)
+                                historic_bad[fp] += 1
+                        except Exception as e:
+                            print(e)
+                        '''
+                except Exception as e:
+                    print("exception: ", e)
+                    exc_type, _, exc_tb = sys.exc_info()
+                    print(exc_type, exc_tb.tb_lineno, "\n\n")
         except:
             print(filename)
 
 print(TOTAL)
 print(FL, OTHERS)
+
+
+with open("bad_guardexit_freq.json", "w+") as f:
+    json.dump(historic_bad, f)
