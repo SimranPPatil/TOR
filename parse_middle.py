@@ -141,16 +141,19 @@ with open('data3nf.csv', "a") as csvfile:
         run_time = filename.split('MiddleRelayProfile')[1].split(' ')[1].split('.')[0]
         print(filename)
         with open(filename) as rp:
-            d = json.load(rp)
-            middle_good = d['Middle']['Good']
-            middle_bad = d['Middle']['Bad']
-            print(filename, len(middle_bad), len(middle_good))
-            TOTAL += len(middle_good) + len(middle_bad)
-            for node in middle_good:
-                writer_good(node, 'middle_good', filewriter)
-            for node in middle_bad:
-                #writer_bad(node, filewriter, run_date, run_time, 'middle_bad: ')
-                writer_good(node, 'middle_bad', filewriter)
+            try:
+                d = json.load(rp)
+                middle_good = d['Middle']['Good']
+                middle_bad = d['Middle']['Bad']
+                print(filename, len(middle_bad), len(middle_good))
+                TOTAL += len(middle_good) + len(middle_bad)
+                for node in middle_good:
+                    writer_good(node, 'middle_good', filewriter)
+                for node in middle_bad:
+                    #writer_bad(node, filewriter, run_date, run_time, 'middle_bad: ')
+                    writer_good(node, 'middle_bad', filewriter)
+            except Exception as e:
+                print("exception: ", e)
 
 print(TOTAL)
 print(FL)
