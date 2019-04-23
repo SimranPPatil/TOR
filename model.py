@@ -28,7 +28,7 @@ if __name__ == "__main__":
     categorical_mapper = {}  # maps category values to numbers
 
     # "platform"
-    with open("data/datanf.csv") as csvfile:
+    with open("datanf.csv") as csvfile:
         data = csv.reader(csvfile)
         feature_names = next(data)
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
                     sample[fname] = fvalue
             reformatted.append(sample)
 
-    with open("data/data3nf.csv") as csvfile:
+    with open("data3nf.csv") as csvfile:
         data = csv.reader(csvfile)
         feature_names = next(data)
 
@@ -110,7 +110,10 @@ if __name__ == "__main__":
     exit()
     '''
 
-    dataset = []
+    guard_dataset = []
+    exit_dataset = []
+    middle_dataset = []
+
     # generate numpy array
     for sample in reformatted:
         entry = []
@@ -133,52 +136,61 @@ if __name__ == "__main__":
                     array[0] = sample[feature]
                 entry.append(array)
         entry = np.concatenate(entry)
-        dataset.append((entry, label))
+        label_string = categorical_mapper["label"]["toString"][label]
+        if "exit" in label_string:
+            exit_dataset.append((entry, label))
+        elif "guard" in label_string:
+            guard_dataset.append((entry, label))
+        elif "middle" in label_string:
+            middle_dataset.append((entry, label))
 
-    shuffle(dataset)
-    print(len(dataset))
-    X = []
-    Y = []
-    for s in dataset:
-        X.append(s[0])
-        Y.append(s[1])
-    # X = normalize(X)
-    scaler = StandardScaler()
-    scaler.fit(X)
-    X = scaler.transform(X)
+    total_dataset = [exit_dataset, guard_dataset, middle_dataset]
 
-    train_len = int(len(dataset) * 0.75)
-    test_len = len(dataset) - train_len
+    for dataset in total_dataset:
+        shuffle(dataset)
+        X = []
+        Y = []
+        for s in dataset:
+            X.append(s[0])
+            Y.append(s[1])
+        # X = normalize(X)
+        scaler = StandardScaler()
+        scaler.fit(X)
+        X = scaler.transform(X)
 
-    train_set = dataset[:train_len]
-    test_set = dataset[train_len:]
+        train_len = int(len(dataset) * 0.75)
+        test_len = len(dataset) - train_len
 
-    X_tr = X[:train_len]
-    Y_tr = Y[:train_len]
-    X_te = X[train_len:]
-    Y_te = Y[train_len:]
+        train_set = dataset[:train_len]
+        test_set = dataset[train_len:]
 
-    # model = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial', max_iter=100, class_weight="balanced")
-    # model = SVC(C=1.0, cache_size=200, coef0=0.0, decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf', max_iter=10, probability=False, random_state=None, shrinking=True, tol=0.001, verbose=False,class_weight=label_weight)
-    model = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=0, class_weight="balanced")
-    #model = Perceptron(tol=1e-3, random_state=0, class_weight="balanced")
-    model.fit(X_tr, Y_tr)
-    Yp = model.predict(X_te)
-    correct = 0.0
-    confusion_mat = confusion_matrix(Y_te, Yp)
-    print(confusion_mat)
-    for i in range(len(confusion_mat)):
-        correct += confusion_mat[i][i]
-    print("Accuracy: %f" % (correct / len(Yp)))
-    print()
+        X_tr = X[:train_len]
+        Y_tr = Y[:train_len]
+        X_te = X[train_len:]
+        Y_te = Y[train_len:]
 
-    label_dist = {}
-    for t in Y_te:
-        if t not in label_dist:
-            label_dist[t] = 0
-        label_dist[t] += 1
+        # model = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial', max_iter=100, class_weight="balanced")
+        # model = SVC(C=1.0, cache_size=200, coef0=0.0, decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf', max_iter=10, probability=False, random_state=None, shrinking=True, tol=0.001, verbose=False,class_weight=label_weight)
+        model = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=0, class_weight="balanced")
+        #model = Perceptron(tol=1e-3, random_state=0, class_weight="balanced")
+        model.fit(X_tr, Y_tr)
+        Yp = model.predict(X_te)
+        correct = 0.0
+        confusion_mat = confusion_matrix(Y_te, Yp)
+        print(confusion_mat)
+        for i in range(len(confusion_mat)):
+            correct += confusion_mat[i][i]
+        print("Accuracy: %f" % (correct / len(Yp)))
+        print()
 
-    for k in range(len(label_dist)):
-        v = label_dist[k]
-        label_name = categorical_mapper["label"]["toString"][k]
-        print("%d: %s %f" % (k, label_name, float(v) / len(Y_te)))
+        label_dist = {}
+        for t in Y_te:
+            if t not in label_dist:
+                label_dist[t] = 0
+            label_dist[t] += 1
+
+        for k in range(len(label_dist)):
+            v = label_dist[k]
+            label_name = categorical_mapper["label"]["toString"][k]
+            print("%d: %s %f" % (k, label_name, float(v) / len(Y_te)))
+        print("------------------------------------------------")
