@@ -83,8 +83,9 @@ def scan_requests(controller, path, failures):
     Fetch check.torproject.org through the given path of relays, providing back
     the time it took.
     """
-
+    start_build_timer = time.time()
     circuit_id = controller.new_circuit(path, await_build=True)
+    ckt_build_time = time.time() - start_build_timer
 
     def attach_stream(stream):
         if stream.status == 'NEW':
@@ -105,7 +106,7 @@ def scan_requests(controller, path, failures):
             failures.append("WRONG DIGEST: Request didn't have the right content")
             raise ValueError("Request didn't have the right content")
 
-        return time.time() - start_time
+        return time.time() - start_time, ckt_build_time
     finally:
         controller.remove_event_listener(attach_stream)
         controller.reset_conf('__LeaveStreamsUnattached')
@@ -183,10 +184,10 @@ def getRelayInfo(desc):
 #
 def test_circuit(guard, exit, controller, failure_log):
     try:
-        time_taken = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
-        print('| %s -- %s | => %0.2f seconds' %
-              (guard.nickname, exit.nickname, time_taken))
-        message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds"
+        time_taken, build_time = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
+        print('| %s -- %s | => %0.2f seconds and %f' %
+              (guard.nickname, exit.nickname, time_taken, build_time))
+        message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
         logging.info(message)
         return 1
     except Exception as exc:
@@ -211,10 +212,10 @@ def test_circuit(guard, exit, controller, failure_log):
 
 def test_circuit_middle(guard, exit, middle, controller, failure_log):
     try:
-        time_taken = scan_requests(controller, [guard.fingerprint, middle.fingerprint, exit.fingerprint], failure_log)
-        print('| %s -- %s -- %s | => %0.2f seconds' %
-              (guard.nickname, middle.nickname, exit.nickname, time_taken))
-        message = middle.fingerprint + " => " + str(time_taken) + " seconds"
+        time_taken, build_time = scan_requests(controller, [guard.fingerprint, middle.fingerprint, exit.fingerprint], failure_log)
+        print('| %s -- %s -- %s | => %0.2f seconds %f ' %
+              (guard.nickname, middle.nickname, exit.nickname, time_taken, build_time))
+        message = middle.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
         logging.info(message)
         return 1
     except Exception as exc:
@@ -251,7 +252,7 @@ def build_circuits(PORT, fixedExit, fixedGuard, limit=0):
     fixedGFailures = []
     fixedEFailures = []
 
-    exits, guards, AllExits = get_relays()
+    _, guards, AllExits = get_relays()
     with stem.control.Controller.from_port(port=PORT) as controller:
         controller.authenticate()
         # If fixedExit has been set
@@ -385,7 +386,7 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDGUARD")
         exit()
 
-    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, limit=10)
+    relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, limit=0)
     graphBuild(fixedGFailures, "DC/FixedGuard", 0)
     graphBuild(fixedEFailures, "DC/FixedExit", 1)
     print("FixedExit, bad guards: ", len(relayProfile["Bad"]["Guard"]))
@@ -394,7 +395,7 @@ if __name__ == "__main__":
     with open('DC/relayProfile' + str(datetime.now()) +'.json', 'w') as outfile:
         json.dump(relayProfile, outfile)
 
-    relayProfile, MiddleFailures = build_3hop_circuits(9051, fixedExit, fixedGuard, limit=10)
+    relayProfile, MiddleFailures = build_3hop_circuits(9051, fixedExit, fixedGuard, limit=0)
     graphBuild(MiddleFailures, "DC/MiddleFailures", 0)
     print("bad middle relays: ", len(relayProfile["Middle"]["Bad"]))
     print("good middle relays: ", len(relayProfile["Middle"]["Good"]))
