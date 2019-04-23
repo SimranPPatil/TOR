@@ -170,9 +170,9 @@ if __name__ == "__main__":
         Y_te = Y[train_len:]
 
         # model = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial', max_iter=100, class_weight="balanced")
-        # model = SVC(C=1.0, cache_size=200, coef0=0.0, decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf', max_iter=10, probability=False, random_state=None, shrinking=True, tol=0.001, verbose=False,class_weight=label_weight)
-        model = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=0, class_weight="balanced")
-        #model = Perceptron(tol=1e-3, random_state=0, class_weight="balanced")
+        model = SVC(C=1.0, cache_size=200, coef0=0.0, decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf', max_iter=10, probability=False, random_state=None, shrinking=True, tol=0.001, verbose=False,class_weight="balanced")
+        # model = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=0, class_weight="balanced")
+        # model = Perceptron(tol=1e-3, random_state=0, class_weight="balanced")
         model.fit(X_tr, Y_tr)
         Yp = model.predict(X_te)
         correct = 0.0
@@ -189,8 +189,9 @@ if __name__ == "__main__":
                 label_dist[t] = 0
             label_dist[t] += 1
 
-        for k in range(len(label_dist)):
-            v = label_dist[k]
-            label_name = categorical_mapper["label"]["toString"][k]
-            print("%d: %s %f" % (k, label_name, float(v) / len(Y_te)))
+        print(label_dist)
+
+        for key, val in label_dist.items():
+            label_name = categorical_mapper["label"]["toString"][key]
+            print("%d: %s %f" % (key, label_name, float(val) / len(Y_te)))
         print("------------------------------------------------")
