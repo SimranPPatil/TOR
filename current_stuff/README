@@ -1,0 +1,22 @@
+# This project comprises of 5 scripts:
+
+# main.py 
+* It creates virtual circuits of two kinds over the tor network
+* The two-hop circuits have either a fixed guard or a fixed exit
+* The three-hop circuits have fixed guard and fixed exit and a changing middle relay
+* The relays are fetched from the consensus
+* We perform DNS resolution through a SOCKS proxy and perform get requests to fetch a file over the circuit and verify its hash
+* The script also classifies the relays as good and bad and logs the type of failures it notices
+* The corresponding relay profiles are fetched from an API and stored in 'relayProfile' json files
+
+
+# parse_guardexit.py and parse_middle.py
+* These scripts work with the failure log and the relay profile json files to generate csv files for doing some machine learning and to extract information based on historical analysis of relay failures to create potential blacklists
+
+# model.py
+This script uses the csv files generated from all the data collection runs to try and correlate relay attributes to type of failures observed
+
+# dataGraph.py
+Generates the graph of distribution of each feature based on the ML model
+
+
