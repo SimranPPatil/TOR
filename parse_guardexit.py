@@ -1,7 +1,7 @@
 import glob
 import json
 import csv
-import re
+import re, sys
 from datetime import datetime
 
 OUTER_ATTRIBUTES = ["version", "build_revision"]
@@ -73,7 +73,7 @@ def writer_good(node, label, filewriter):
 
 
 def writer_bad(node, filewriter, run_date, run_time, nodetype):
-    global FL, OTHERS, LOGFILE
+    global FL, OTHERS, LOGFILE, historic_bad
     idx = EPOCHS[run_date].index(run_time)
     startidx = 0
     if idx != 0:

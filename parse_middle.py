@@ -76,7 +76,7 @@ def writer_good(node, label, filewriter):
         FL += 1
 
 def writer_bad(node, filewriter, run_date, run_time, nodetype):
-    global FL, LOGFILE
+    global FL, LOGFILE, historic_bad
     idx = EPOCHS[run_date].index(run_time)
     startidx = 0
     if idx != 0:
