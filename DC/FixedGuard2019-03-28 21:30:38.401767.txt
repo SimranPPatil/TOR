@@ -1,1 +1,0 @@
-{"0": {"key": "Circuit failed to be created: CHANNEL_CLOSED", "frequency": "17"}, "1": {"key": "Circuit failed to be created: DESTROYED", "frequency": "39"}, "2": {"key": "Circuit failed to be created: TIMEOUT", "frequency": "49"}, "3": {"key": "No descriptor", "frequency": "14"}, "4": {"key": "No such router", "frequency": "3"}}
