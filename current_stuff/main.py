@@ -17,6 +17,7 @@ import stem.process
 import logging
 import json
 import matplotlib
+import csv
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -68,8 +69,8 @@ FASTGUARD = "5CECC5C30ACC4B3DE462792323967087CC53D947"
 FG_NICKNAME = "PrivacyRepublic0001"
 
 # https://metrics.torproject.org/rs.html#details/BC630CBBB518BE7E9F4E09712AB0269E9DC7D626
-FASTEXIT = "BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
-FE_NICKNAME = "IPredator"
+FASTEXIT = "AB5E499D03B4E057B55322F9EF5B9261E122958B"
+FE_NICKNAME = "Hansa"
 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30  # timeout before we give up on a circuit
@@ -183,60 +184,79 @@ def getRelayInfo(desc):
 
 #
 def test_circuit(guard, exit, controller, failure_log):
-    try:
-        time_taken, build_time = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
-        print('| %s -- %s | => %0.2f seconds and %f' %
-              (guard.nickname, exit.nickname, time_taken, build_time))
-        message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
-        logging.info(message)
-        return 1
-    except Exception as exc:
-        # Custom Log
-        if "invalid start byte" in str(exc):
-            failure_log.append("invalid start byte")
-        elif "invalid continuation byte" in str(exc):
-            failure_log.append("invalid continuation byte")
-        elif "No descriptor" in str(exc):
-            failure_log.append("No descriptor")
-        elif "No such router" in str(exc):
-            failure_log.append("No such router")
-        elif "Failed to establish a new connection" in str(exc):
-            failure_log.append("Failed to establish a new connection")
-        else:
-            failure_log.append(str(exc))
-        # Standard Log
-        message = "%s => %s ERROR %s" % (
-            guard.fingerprint, exit.fingerprint, str(exc))
-        logging.info(message)
-        return -1
+    with open('exctime_2hop.csv', 'a+', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        execrow = []
+        try:
+            errorstart_time = time.time()
+            execrow.append(guard.fingerprint)
+            execrow.append(exit.fingerprint)
+            time_taken, build_time = scan_requests(controller, [guard.fingerprint, exit.fingerprint], failure_log)
+            print('| %s -- %s | => %0.2f seconds and %f' %
+                (guard.nickname, exit.nickname, time_taken, build_time))
+            message = guard.fingerprint + "--" + exit.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
+            logging.info(message)
+            return 1
+        except Exception as exc:
+            # Custom Log
+            time_for_exception = time.time() - errorstart_time
+            execrow.append(str(time_for_exception))
+            if "invalid start byte" in str(exc):
+                failure_log.append("invalid start byte")
+            elif "invalid continuation byte" in str(exc):
+                failure_log.append("invalid continuation byte")
+            elif "No descriptor" in str(exc):
+                failure_log.append("No descriptor")
+            elif "No such router" in str(exc):
+                failure_log.append("No such router")
+            elif "Failed to establish a new connection" in str(exc):
+                failure_log.append("Failed to establish a new connection")
+            else:
+                failure_log.append(str(exc))
+            # Standard Log
+            message = "%s => %s ERROR %s" % (
+                guard.fingerprint, exit.fingerprint, str(exc))
+            logging.info(message)
+            csvwriter.writerow(execrow)
+            return -1
 
 def test_circuit_middle(guard, exit, middle, controller, failure_log):
-    try:
-        time_taken, build_time = scan_requests(controller, [guard.fingerprint, middle.fingerprint, exit.fingerprint], failure_log)
-        print('| %s -- %s -- %s | => %0.2f seconds %f ' %
-              (guard.nickname, middle.nickname, exit.nickname, time_taken, build_time))
-        message = middle.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
-        logging.info(message)
-        return 1
-    except Exception as exc:
-        # Custom Log for graph
-        if "invalid start byte" in str(exc):
-            failure_log.append("invalid start byte")
-        elif "invalid continuation byte" in str(exc):
-            failure_log.append("invalid continuation byte")
-        elif "No descriptor" in str(exc):
-            failure_log.append("No descriptor")
-        elif "No such router" in str(exc):
-            failure_log.append("No such router")
-        elif "Failed to establish a new connection" in str(exc):
-            failure_log.append("Failed to establish a new connection")
-        else:
-            failure_log.append(str(exc))
-        # Standard Log
-        message = "%s => ERROR %s" % (
-            middle.fingerprint, str(exc))
-        logging.info(message)
-        return -1
+    with open('exctime_3hop.csv', 'a+', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        execrow = []
+        try:
+            errorstart_time = time.time()
+            execrow.append(guard.fingerprint)
+            execrow.append(middle.fingerprint)
+            execrow.append(exit.fingerprint)
+            time_taken, build_time = scan_requests(controller, [guard.fingerprint, middle.fingerprint, exit.fingerprint], failure_log)
+            print('| %s -- %s -- %s | => %0.2f seconds %f ' %
+                (guard.nickname, middle.nickname, exit.nickname, time_taken, build_time))
+            message = middle.fingerprint + " => " + str(time_taken) + " seconds " + str(build_time) + " seconds "
+            logging.info(message)
+            return 1
+        except Exception as exc:
+            # Custom Log for graph
+            time_for_exception = time.time() - errorstart_time
+            execrow.append(str(time_for_exception))
+            if "invalid start byte" in str(exc):
+                failure_log.append("invalid start byte")
+            elif "invalid continuation byte" in str(exc):
+                failure_log.append("invalid continuation byte")
+            elif "No descriptor" in str(exc):
+                failure_log.append("No descriptor")
+            elif "No such router" in str(exc):
+                failure_log.append("No such router")
+            elif "Failed to establish a new connection" in str(exc):
+                failure_log.append("Failed to establish a new connection")
+            else:
+                failure_log.append(str(exc))
+            # Standard Log
+            message = "%s => ERROR %s" % (
+                middle.fingerprint, str(exc))
+            logging.info(message)
+            csvwriter.writerow(execrow)
+            return -1
 
 def build_circuits(PORT, fixedExit, fixedGuard, limit=0):
     
