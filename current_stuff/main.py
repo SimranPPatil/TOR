@@ -406,6 +406,7 @@ if __name__ == "__main__":
         print("COULD NOT FIND FIXEDEXIT OR FIXEDGUARD")
         exit()
 
+    
     relayProfile, fixedGFailures, fixedEFailures = build_circuits(9051, fixedExit, fixedGuard, limit=0)
     graphBuild(fixedGFailures, "DC/FixedGuard", 0)
     graphBuild(fixedEFailures, "DC/FixedExit", 1)
