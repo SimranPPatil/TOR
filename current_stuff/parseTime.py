@@ -41,10 +41,9 @@ def filter_relay(hist_file, thresh):
         for k,v in hist_dict.items():
             if len(v) > thresh:
                 result_tuple.append((k,v))
-    return result_tuple
+    return sorted(result_tuple, key=lambda x: len(x[1]))
 
 def writer_good(node):
-    output = []
     try:
         info = node['relays']
     except Exception as e:
@@ -66,8 +65,7 @@ def writer_good(node):
                 row.append(flag)
             else:
                 row.append("NA")
-        output.append(row)
-    return output
+        return row
 
 def getRelayInfo(fingerprint):
     url = "https://onionoo.torproject.org/details?search=" + fingerprint
@@ -78,9 +76,9 @@ def getRelayInfo(fingerprint):
         return {"exception": str(e)}
 
 def fetch_infos(filtered_tuples):
-    infos =[]
+    infos = {}
     for t in filtered_tuples:
-        infos.append(getRelayInfo(t[0]))
+        infos[t[0]] = getRelayInfo(t[0])
     return infos
 
 if __name__ == "__main__":
@@ -93,10 +91,14 @@ if __name__ == "__main__":
     hl_m = parse_history("bad_middle_freq.json")
     plot_line_graph(hl_m, 2, "Failure Frequency Distribution per Middle Relay", "hm")
 
-    filtered_ge = filter_relay("bad_middle_freq.json", 5)
-    filtered_m = filter_relay("bad_guardexit_freq.json", 5)
+    filtered_m = filter_relay("bad_middle_freq.json", 5)
+    filtered_ge = filter_relay("bad_guardexit_freq.json", 5)
 
     filtered_infos_ge = fetch_infos(filtered_ge)
     filtered_infos_m = fetch_infos(filtered_m)
+    for t in filtered_ge:
+        key = t[0]
+        print("%s: failure count %d"%(filtered_infos_ge[key],len(t[1])))
 
-    print(writer_good(filtered_infos_ge[0]))
+
+
